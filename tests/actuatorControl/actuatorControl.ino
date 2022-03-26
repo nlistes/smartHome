@@ -1,11 +1,5 @@
 ﻿#include <Bounce2.h>
 #include <Cmd.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
-//#include <SPI.h>
-//#include <Ethernet.h>
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
 
 // ==== Debug and Test options ==================
 #define _DEBUG_
@@ -25,21 +19,6 @@
 #define _PL(a)
 #define _PX(a)
 #endif
-
-
-#define ONE_WIRE_BUS 2
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
-DeviceAddress insideThermometer = { 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C };
-DeviceAddress outsideThermometer = { 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA };
-
-WiFiClient ethClient;
-//EthernetClient ethClient;
-//byte MAC_ADDRESS[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-PubSubClient mqttClient(ethClient);
-
-#define MQTT_SERVER "10.20.30.60"
 
 // MC connected pins (ATMEGA328P)
 //#define PIN_OPEN	7 // ESP=D3 (pull-up) To activate set value to LOW
@@ -87,8 +66,8 @@ volatile static byte command = COMMAND_NONE;
 volatile static byte action = ACTION_INIT_NONE;
 
 // Direction constants
-#define DIRECTION_OPEN	(+1) // Pieskaitit ja atveras
-#define DIRECTION_CLOSE	(-1)
+#define DIRECTION_OPEN	1 // Pieskaitit ja atveras
+#define DIRECTION_CLOSE	-1
 
 static int direction = 0;
 
@@ -110,7 +89,6 @@ void setup()
 	Serial.begin(74880);
 	delay(100);
 	cmdInit(&Serial);
-	//cmdInit(mqttClient.setStream);
 	_PL("Programm started...");
 
 	pinMode(PIN_OPENED, INPUT);
@@ -120,26 +98,6 @@ void setup()
 	pinMode(PIN_CLOSED, INPUT);
 	debouncer_PIN_CLOSED.attach(PIN_CLOSED);
 	debouncer_PIN_CLOSED.interval(5);
-
-	//sensors.begin();
-	//sensors.setResolution(12);
-
-	////Ethernet.begin(MAC_ADDRESS);
-	////_PL(Ethernet.localIP());
-	WiFi.mode(WIFI_STA);
-	WiFi.begin("OSIS", "IBMThinkPad0IBMThinkPad1");
-		while (WiFi.status() != WL_CONNECTED)
-		{
-		delay(500);
-		_PP(".");
-		}
-
-	_PL("");
-	_PL("WiFi connected");
-	_PL("IP address: ");
-	_PL(WiFi.localIP());
-	mqttClient.setServer(MQTT_SERVER, 1883);
-	mqttClient.connect("cityHeatControl");
 
 	//command = COMMAND_INIT;
 	//action = ACTION_INIT_INIT;
@@ -163,21 +121,6 @@ void loop()
 	if (currentStatus != previousStatus)
 	{
 		_PP("Current status: "); _PL(currentStatus);
-		String mqttString;
-		mqttString = String(currentStatus);
-		if (!mqttClient.connected())
-		{
-			//_PL(mqttClient.state());
-			mqttClient.connect("cityHeatControl");
-		}
-		mqttClient.publish("cityHeatControl/HStatus", mqttString.c_str());
-		//sensors.requestTemperatures();
-		//mqttString = String(sensors.getTempC(insideThermometer));
-		//_PP("inTemp = "); _PL(mqttString.c_str());
-		//mqttClient.publish("cityHeatControl/inTemp", mqttString.c_str());
-		//mqttString = String(sensors.getTempC(outsideThermometer));
-		//mqttClient.publish("cityHeatControl/outTemp", mqttString.c_str());
-		//_PP("outTemp = "); _PL(mqttString.c_str());
 		previousStatus = currentStatus;
 	}
 	//if (debouncer_PIN_OPENED.changed())
@@ -282,7 +225,6 @@ void loop()
 		break;
 	}
 
-	mqttClient.loop();
 	cmdPoll();
 }
 
