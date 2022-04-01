@@ -99,6 +99,23 @@ volatile static unsigned long moveTimePlanned = 0, movementStartTime = 0, moveTi
 
 byte actualPosition = 0;
 
+void mqttCallback(char* topic, byte* payload, unsigned int length)
+{
+	char c;
+	_PP("Message arrived ["); _PP(topic);_PP("] ");
+	for (int i = 0; i < length; i++)
+	{
+		_PP((char)payload[i]);
+	}
+	_PL();
+
+	c = (char)payload[0];
+	if (c == 'g')
+	{
+		cmdGetStatuss(0,c);
+	}
+
+}
 
 void setup()
 {
@@ -139,6 +156,7 @@ void setup()
 	_PL("IP address: ");
 	_PL(WiFi.localIP());
 	mqttClient.setServer(MQTT_SERVER, 1883);
+	mqttClient.setCallback(mqttCallback);
 	mqttClient.connect("cityHeatControl");
 
 	//command = COMMAND_INIT;
@@ -169,6 +187,7 @@ void loop()
 		{
 			//_PL(mqttClient.state());
 			mqttClient.connect("cityHeatControl");
+			mqttClient.subscribe("cityHeatControl/command");
 		}
 		mqttClient.publish("cityHeatControl/HStatus", mqttString.c_str());
 		//sensors.requestTemperatures();
