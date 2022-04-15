@@ -18,10 +18,14 @@
 #endif
 
 #include <Bounce2.h>
-#include <ESP8266WiFi.h>
 //#include <Ethernet.h>
-#include <PubSubClient.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+    #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+    #include <WiFi.h>
+#endif
 
+#include <PubSubClient.h>
 #include <TaskScheduler.h>
 
 
@@ -29,9 +33,9 @@
 #define PASS "IBMThinkPad0IBMThinkPad1"
 #define MQTT_SERVER "10.20.30.60"
 
-WiFiClient ethClient;
 //EthernetClient ethClient;
 //byte MAC_ADDRESS[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+WiFiClient ethClient;
 PubSubClient mqttClient(ethClient);
 
 #define MSG_BUFFER_SIZE	50
@@ -59,18 +63,18 @@ void callback(char* topic, byte* payload, unsigned int length)
 
     if ((char)payload[0] == '1')
     {
-        digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Active low on the ESP-01)
+        //digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Active low on the ESP-01)
     }
     else
     {
-        digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
+        //digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
     }
 
 }
 
 void setup()
 {
-    pinMode(LED_BUILTIN, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+    //pinMode(LED_BUILTIN, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
     Serial.begin(74880);
     delay(100);
     _PL(); _PP("Connecting to "); _PL(SSID);
