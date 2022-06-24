@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{785CBE7F-C9FE-41FB-A245-884DDACDF70A}</ProjectGuid>
-    <RootNamespace>btnDebounce</RootNamespace>
-    <ProjectName>btnDebounce</ProjectName>
+    <ProjectGuid>{60552213-CDF7-44E3-94F0-56BD8CA32EB1}</ProjectGuid>
+    <RootNamespace>isrDebounce</RootNamespace>
+    <ProjectName>isrDebounce</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -77,10 +77,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\btnDebounce;$(ProjectDir)..\..\..\..\Users\nauri\OneDrive\Documents\Arduino\libraries\TaskScheduler\src;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\avr;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\libb64;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\spiffs;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\umm_malloc;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\variants\d1_mini;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\lwip2\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\libc\xtensa-lx106-elf\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\Temp\VMBuilds\flowMeter\esp8266_d1_mini_pro\Debug\core;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include\c++\4.8.2;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include\c++\4.8.2\xtensa-lx106-elf;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\lib\gcc\xtensa-lx106-elf\4.8.2\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>$(ProjectDir)__vm\.btnDebounce.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\isrDebounce;$(ProjectDir)..\..\..\..\Users\nauri\OneDrive\Documents\Arduino\libraries\TaskScheduler\src;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\avr;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\libb64;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\spiffs;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\cores\esp8266\umm_malloc;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\variants\d1_mini;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\lwip2\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\libc\xtensa-lx106-elf\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include\c++\4.8.2;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include\c++\4.8.2\xtensa-lx106-elf;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\xtensa-lx106-elf\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\tools\xtensa-lx106-elf-gcc\3.0.4-gcc10.3-1757bed\lib\gcc\xtensa-lx106-elf\4.8.2\include;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\arduino15\packages\esp8266\hardware\esp8266\3.0.2\tools\sdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)__vm\.isrDebounce.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
-      <PreprocessorDefinitions>__ESP8266_esp8266__;__ESP8266_ESP8266__;__ets__;ICACHE_FLASH;_GNU_SOURCE;MMU_IRAM_SIZE=0x8000;MMU_ICACHE_SIZE=0x8000;NONOSDK22x_190703=1;F_CPU=80000000L;LWIP_OPEN_SRC;TCP_MSS=536;LWIP_FEATURES=1;LWIP_IPV6=0;ARDUINO=108010;ARDUINO_ESP8266_WEMOS_D1MINI;ARDUINO_ARCH_ESP8266;FLASHMODE_DIO;ESP8266;__cplusplus=201103L;_VMICRO_INTELLISENSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__ESP8266_esp8266__;__ESP8266_ESP8266__;__ets__;ICACHE_FLASH;_GNU_SOURCE;MMU_IRAM_SIZE=0x8000;MMU_ICACHE_SIZE=0x8000;NONOSDK22x_190703=1;F_CPU=80000000L;LWIP_OPEN_SRC;TCP_MSS=536;LWIP_FEATURES=1;LWIP_IPV6=0;ARDUINO=108010;ARDUINO_ESP8266_WEMOS_D1MINIPRO;ARDUINO_ARCH_ESP8266;FLASHMODE_DIO;ESP8266;__cplusplus=201103L;_VMICRO_INTELLISENSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -107,19 +107,14 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="btnDebounce.ino">
+    <None Include="isrDebounce.ino">
       <FileType>CppCode</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="__vm\.btnDebounce.vsarduino.h" />
+    <ClInclude Include="__vm\.isrDebounce.vsarduino.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-  <ProjectExtensions>
-    <VisualStudio>
-      <UserProperties arduino.upload.port="COM6" />
-    </VisualStudio>
-  </ProjectExtensions>
 </Project>

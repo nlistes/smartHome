@@ -37,9 +37,35 @@ void IRAM_ATTR btnISR()
 	isrCount++;
 }
 
-void printCount();
-Task tPrintCount(5* TASK_SECOND, TASK_FOREVER, &printCount, &runner);
+void IRAM_ATTR pressButtonISR_0()
+{
+	isrAction(0);
+}
+void OnButtonPressed();
+Task tButtonPressed(TASK_IMMEDIATE, TASK_ONCE, &OnButtonPressed, &runner);
 
+void OnButtonReleased();
+Task tButtonReleased(TASK_IMMEDIATE, TASK_ONCE, &OnButtonReleased, &runner);
+
+
+void printCount();
+Task tPrintCount(5 * TASK_SECOND, TASK_FOREVER, &printCount, &runner);
+
+void OnButtonPressed()
+{
+	_PN("tButtonPressed:OnButtonPressed");
+	attachInterrupt(digitalPinToInterrupt(btnPins[0]), &releaseButtonISR, FALLING);
+	//attachInterrupt(digitalPinToInterrupt(btnPins[1]), &releaseButtonISR, FALLING);
+	//attachInterrupt(digitalPinToInterrupt(btnPins[2]), &releaseButtonISR, FALLING);
+}
+
+void OnButtonReleased()
+{
+	_PN("tButtonReleased:OnButtonReleased\n");
+	attachInterrupt(digitalPinToInterrupt(btnPins[0]), &pressButtonISR_0, RISING);
+	//attachInterrupt(digitalPinToInterrupt(btnPins[1]), &pressButtonISR_1, RISING);
+	//attachInterrupt(digitalPinToInterrupt(btnPins[2]), &pressButtonISR_2, RISING);
+}
 
 void setup()
 {
@@ -48,8 +74,8 @@ void setup()
 	_PL(); _PN("Starting application...");
 
 	pinMode(BTN_PIN, INPUT);
-	attachInterrupt(digitalPinToInterrupt(BTN_PIN), btnISR, RISING);
-	tPrintCount.enable();
+	//attachInterrupt(digitalPinToInterrupt(BTN_PIN), btnISR, RISING);
+	//tPrintCount.enable();
 }
 
 void loop()

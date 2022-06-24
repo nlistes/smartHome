@@ -1,6 +1,6 @@
 // ==== Debug and Test options ==================
 #define _DEBUG_
-//#define _TEST_
+#define _TEST_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -18,65 +18,96 @@
 #define _PH(a)
 #endif
 
-#define MSG_BUFFER_SIZE	50
-char msg[MSG_BUFFER_SIZE];
-
 #if defined(ARDUINO_ARCH_ESP8266)
-	#include <ESP8266WiFi.h>
-	#define COM_SPEED 74880
+#include <ESP8266WiFi.h>
+#define COM_SPEED 74880
+#define ONE_WIRE_BUS D5
 #elif defined(ARDUINO_ARCH_ESP32)
-	#include <WiFi.h>
-	#define COM_SPEED 115200
+#include <WiFi.h>
+#define COM_SPEED 115200
+#define ONE_WIRE_BUS 21
 #endif
 
-WiFiClient ethClient;
-
-#define PRIMARY_SSID "OSIS"
-#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
-
-#define SECONDARY_SSID "OSIS"
-#define SECONDARY_PASS "IBMThinkPad0IBMThinkPad1"
-
-
-#include <PubSubClient.h>
-#define MQTT_SERVER "10.20.30.60"
-PubSubClient mqttClient(ethClient);
-
 #include <TaskScheduler.h>
-
-Scheduler runner;
-
+#include <PubSubClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#define ONE_WIRE_BUS D5
+
+#define MSG_BUFFER_SIZE	50
+char msg[MSG_BUFFER_SIZE];
+
+
+#ifdef _TEST_
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#else
+#define PRIMARY_SSID "PAGRABS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#endif // _TEST_
+
+#define MQTT_SERVER "10.20.30.60"
+#define CONNECTION_TIMEOUT 5
+
+#define TEMPERATURE_PRECISION 12
+#define TEMPERATURE_READ_PERIOD 20
+
+Scheduler runner;
+WiFiClient ethClient;
+PubSubClient mqttClient(ethClient);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-DeviceAddress topThermometer = { 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }; // 0
-DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }; // 3
-
-#define TEMPERATURE_PRECISION 12
+#ifdef _TEST_
+	DeviceAddress topThermometer = { 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }; // 1
+	DeviceAddress caseThermometer = { 0x28, 0x42, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xC0 }; // 5
+#else
+	DeviceAddress topThermometer = { 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }; // 0
+	DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }; // 3
+#endif // _TEST_
 
 volatile float topTemperature, caseTemperature, diffTemperature;
 
+void OnConnectWiFi();
+Task tConnectWiFi(5 * TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &runner);
+
 void OnConnectMQTT();
-Task tConnctMQTT(5 * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &runner);
+Task tConnectMQTT(5 * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &runner);
 
 void GetTempereature();
-#define TEMPERATURE_READ_PERIOD 20
-Task tGetTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &GetTempereature, &runner);
+Task tGetTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &GetTempereature, &runner);
 
 void OutputResult();
 Task tOutputResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &OutputResult, &runner);
 
+void OnConnectWiFi()
+{
+	_PL(); _PM("Connecting to "); _PP(PRIMARY_SSID);
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
+
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		_PP(".");
+	}
+
+	_PL(); _PN("CONNECTED!");
+	_PP("IP address: "); _PL(WiFi.localIP());
+
+	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
+	WiFi.setAutoReconnect(true);
+	WiFi.persistent(true);
+
+}
 
 void OnConnectMQTT()
 {
+	mqttClient.setServer(MQTT_SERVER, 1883);
 	if (!mqttClient.connected())
 	{
 		_PM("Attempting MQTT connection...");
-		if (mqttClient.connect("flowMeter"))
+		if (mqttClient.connect("tempMeter"))
 		{
 			_PL(" connected!");
 			mqttClient.subscribe("inTopic");
@@ -122,34 +153,17 @@ void OutputResult()
 
 void setup()
 {
+
 	Serial.begin(COM_SPEED);
 	delay(1000);
 	_PM("Starting application...");
-
-	_PL(); _PM("Connecting to "); _PP(PRIMARY_SSID);
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
-
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(500);
-		_PP(".");
-	}
-
-	_PL(); _PN("CONNECTED!");
-	_PP("IP address: "); _PL(WiFi.localIP());
-
-	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-	WiFi.setAutoReconnect(true);
-	WiFi.persistent(true);
-
-	mqttClient.setServer(MQTT_SERVER, 1883);
 
 	//sensors.begin();
 	sensors.setResolution(topThermometer, TEMPERATURE_PRECISION);
 	sensors.setResolution(caseThermometer, TEMPERATURE_PRECISION);
 
-	tConnctMQTT.enable();
+	tConnectWiFi.enable();
+	tConnectMQTT.enable();
 	tGetTempereature.enable();
 	tOutputResult.enable();
 }
