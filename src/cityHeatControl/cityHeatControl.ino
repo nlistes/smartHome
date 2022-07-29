@@ -2,10 +2,20 @@
 #include <Cmd.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-//#include <SPI.h>
-//#include <Ethernet.h>
-#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+
+
+#if defined (ARDUINO_ARCH_AVR)
+	#include <SPI.h>
+	#include <Ethernet.h>
+#define COM_SPEED 9600
+#elif defined(ARDUINO_ARCH_ESP8266)
+	#include <ESP8266WiFi.h>
+	#define COM_SPEED 74880
+#elif defined(ARDUINO_ARCH_ESP32)
+	#include <WiFi.h>
+	#define COM_SPEED 115200
+#endif
 
 // ==== Debug and Test options ==================
 #define _DEBUG_
@@ -34,24 +44,33 @@ DallasTemperature sensors(&oneWire);
 DeviceAddress insideThermometer = { 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C };
 DeviceAddress outsideThermometer = { 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA };
 
-WiFiClient ethClient;
-//EthernetClient ethClient;
-//byte MAC_ADDRESS[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+
+
+#if defined (ARDUINO_ARCH_AVR)
+	EthernetClient ethClient;
+	byte MAC_ADDRESS[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+#elif defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	WiFiClient ethClient;
+#endif
+
 PubSubClient mqttClient(ethClient);
 
 #define MQTT_SERVER "10.20.30.60"
 
-// MC connected pins (ATMEGA328P)
-//#define PIN_OPEN	7 // ESP=D3 (pull-up) To activate set value to LOW
-//#define PIN_OPENED	9 // ESP=D1 (integrated pull-up) If FULLY_OPENED then value is LOW (0, false)
-//#define PIN_CLOSE	6 // ESP=D4 (pull-up) To activate set value to LOW
-//#define PIN_CLOSED	8 // ESP=D2 (integrated pull-up) If FULLY_CLOSED then value is LOW (0, false)
+#if defined (ARDUINO_ARCH_AVR)
+	// MC connected pins (ATMEGA328P)
+	#define PIN_OPEN	7 // ESP=D3 (pull-up) To activate set value to LOW
+	#define PIN_OPENED	9 // ESP=D1 (integrated pull-up) If FULLY_OPENED then value is LOW (0, false)
+	#define PIN_CLOSE	6 // ESP=D4 (pull-up) To activate set value to LOW
+	#define PIN_CLOSED	8 // ESP=D2 (integrated pull-up) If FULLY_CLOSED then value is LOW (0, false)
+#elif defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	// MC connected pins (ESP8266)
+	#define PIN_OPEN	D3 // to activate set value to LOW
+	#define PIN_OPENED	D1 // if FULLY_OPENED then value is LOW (0, false)
+	#define PIN_CLOSE	D4 // to activate set value to LOW
+	#define PIN_CLOSED	D2 // if FULLY_CLOSED then value is LOW (0, false)
+#endif
 
-// MC connected pins (ESP8266)
-#define PIN_OPEN	D3 // to activate set value to LOW
-#define PIN_OPENED	D1 // if FULLY_OPENED then value is LOW (0, false)
-#define PIN_CLOSE	D4 // to activate set value to LOW
-#define PIN_CLOSED	D2 // if FULLY_CLOSED then value is LOW (0, false)
 
 Bounce debouncer_PIN_OPENED = Bounce();
 Bounce debouncer_PIN_CLOSED = Bounce();
@@ -99,23 +118,6 @@ volatile static unsigned long moveTimePlanned = 0, movementStartTime = 0, moveTi
 
 byte actualPosition = 0;
 
-void mqttCallback(char* topic, byte* payload, unsigned int length)
-{
-	char c;
-	_PP("Message arrived ["); _PP(topic);_PP("] ");
-	for (int i = 0; i < length; i++)
-	{
-		_PP((char)payload[i]);
-	}
-	_PL();
-
-	c = (char)payload[0];
-	if (c == 'g')
-	{
-		cmdGetStatuss(0,c);
-	}
-
-}
 
 void setup()
 {
@@ -124,11 +126,38 @@ void setup()
 	pinMode(PIN_CLOSE, OUTPUT);
 	digitalWrite(PIN_CLOSE, HIGH);
 
-	Serial.begin(74880);
+	Serial.begin(COM_SPEED);
 	delay(100);
 	cmdInit(&Serial);
 	//cmdInit(mqttClient.setStream);
 	_PL("Programm started...");
+
+#if defined (ARDUINO_ARCH_AVR)
+	Ethernet.begin(MAC_ADDRESS);
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	WiFi.mode(WIFI_STA);
+	WiFi.begin("OSIS", "IBMThinkPad0IBMThinkPad1");
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		_PP(".");
+	}
+#endif
+
+	_PL("Newtwork connected");
+	_PP("IP address: ");
+
+#if defined (ARDUINO_ARCH_AVR)
+	_PL(Ethernet.localIP());
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	_PL(WiFi.localIP());
+#endif
+
+	_PL("");
 
 	pinMode(PIN_OPENED, INPUT);
 	debouncer_PIN_OPENED.attach(PIN_OPENED);
@@ -141,22 +170,9 @@ void setup()
 	//sensors.begin();
 	//sensors.setResolution(12);
 
-	////Ethernet.begin(MAC_ADDRESS);
-	////_PL(Ethernet.localIP());
-	WiFi.mode(WIFI_STA);
-	WiFi.begin("OSIS", "IBMThinkPad0IBMThinkPad1");
-		while (WiFi.status() != WL_CONNECTED)
-		{
-		delay(500);
-		_PP(".");
-		}
 
-	_PL("");
-	_PL("WiFi connected");
-	_PL("IP address: ");
-	_PL(WiFi.localIP());
 	mqttClient.setServer(MQTT_SERVER, 1883);
-	mqttClient.setCallback(mqttCallback);
+	//mqttClient.setCallback(mqttCallback);
 	mqttClient.connect("cityHeatControl");
 
 	//command = COMMAND_INIT;

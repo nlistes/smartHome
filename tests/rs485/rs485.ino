@@ -1,4 +1,6 @@
 // ==== Debug and Test options ==================
+#include <SensorModbusMaster.h>
+#include <Arduino.h>
 #define _DEBUG_
 #define _TEST_
 
@@ -24,6 +26,7 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #define COM_SPEED 115200
+//HardwareSerial modbusSerial = Serial1;
 #endif
 
 #include <TaskScheduler.h>
@@ -40,7 +43,7 @@
 
 Scheduler ts;
 
-byte command[8] = { 0x01, 0x03, 0x05, 0xBB, 0x00, 0x02, 0xB4, 0xE2 }
+byte command[8] = { 0x01, 0x03, 0x05, 0xBB, 0x00, 0x02, 0xB4, 0xE2 };
 
 void OnConnectWiFi();
 Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
@@ -48,25 +51,35 @@ Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &t
 void OnSendData();
 Task tSendData(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &OnSendData, &ts);
 
+long modbusBaudRate = 9600; // The baud rate the sensor uses
+byte modbusAddress = 0x01;
+
+modbusMaster modbus;
+
 void OnSendData()
 {
-	Serial1.write(command, 8);
+	_PM("Flow: "); _PL(modbus.float32FromRegister(0x03, 1446, littleEndian));
 }
 
 void setup()
 {
 	Serial.begin(COM_SPEED);
-	delay(1000);
-	_PL(); _PM("Starting application...");
+	_PL(); _PN("Starting application...");
 
-	Serial1.begin(9600);
-	delay(1000);
-	//Serial1.println("");
-	Serial1.println("1");
-
-	tConnectWiFi.enable();
+	Serial2.begin(modbusBaudRate);
+	modbus.begin(modbusAddress, Serial2);
+	//modbus.setDebugStream(&Serial);
+	_PM("ModBus device address check. Value must be [361]: "); _PL(modbus.float32FromRegister(0x03, 360, littleEndian));
+	_PM("ModBus device software version: "); _PP(modbus.StringFromRegister(0x03, 1467, 2)); _PP("."); _PL(modbus.StringFromRegister(0x03, 1468, 2));
+	_PM("Current instantaneous flow unit: "); _PL(modbus.int16FromRegister(0x03, 1437 - 1, littleEndian));
+	_PM("Current cumulative flow unit: "); _PL(modbus.int16FromRegister(0x03, 1438 - 1, littleEndian));
+	_PM("Current cumulative flow decimal point position: "); _PL(modbus.int16FromRegister(0x03, 1439 - 1, littleEndian));
+	_PM("Not required (the decimal point position for cumulative heat)
+		: "); _PL(modbus.int16FromRegister(0x03, 1440 - 1, littleEndian));
+	//tConnectWiFi.enable();
 	//tSendData.enableDelayed();
 }
+
 
 void loop()
 {

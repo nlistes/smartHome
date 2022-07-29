@@ -270,16 +270,16 @@ void OutputResult()
 		}
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempInCommon);
-		mqttClient.publish("flowmeter/0/temp/in", msg);
-		_PM("flowmeter/0/temp/in = "); _PL(msg);
+		mqttClient.publish("flowmeter/common/temp/in", msg);
+		_PM("flowmeter/common/temp/in = "); _PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempOutCommon);
-		mqttClient.publish("flowmeter/0/temp/out", msg);
-		_PM("flowmeter/0/temp/out = "); _PL(msg);
+		mqttClient.publish("flowmeter/common/temp/out", msg);
+		_PM("flowmeter/common/temp/out = "); _PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempDiffCommon);
-		mqttClient.publish("flowmeter/0/temp/diff", msg);
-		_PM("flowmeter/0/temp/diff = "); _PL(msg);
+		mqttClient.publish("flowmeter/common/temp/diff", msg);
+		_PM("flowmeter/common/temp/diff = "); _PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempInBoiler);
 		mqttClient.publish("flowmeter/1/temp/in", msg);

@@ -1,6 +1,6 @@
 // ==== Debug and Test options ==================
 #define _DEBUG_
-#define _TEST_
+//#define _TEST_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -137,16 +137,16 @@ void OutputResult()
 	if (mqttClient.connected())
 	{
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", topTemperature);
-		mqttClient.publish("tempmeter/0/temp/top", msg);
-		_PM("tempmeter/0/temp/top = "); _PL(msg);
+		mqttClient.publish("tempmeter/boiler/temp/top", msg);
+		_PM("tempmeter/boiler/temp/top = "); _PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", caseTemperature);
-		mqttClient.publish("tempmeter/0/temp/case", msg);
-		_PM("tempmeter/0/temp/case = "); _PL(msg);
+		mqttClient.publish("tempmeter/boiler/temp/case", msg);
+		_PM("tempmeter/boiler/temp/case = "); _PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", diffTemperature);
-		mqttClient.publish("tempmeter/0/temp/diff", msg);
-		_PM("tempmeter/0/temp/diff = "); _PL(msg);
+		mqttClient.publish("tempmeter/boiler/temp/diff", msg);
+		_PM("tempmeter/boiler/temp/diff = "); _PL(msg);
 
 	}
 }
