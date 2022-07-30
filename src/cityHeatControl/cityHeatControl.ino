@@ -4,19 +4,6 @@
 #include <DallasTemperature.h>
 #include <PubSubClient.h>
 
-
-#if defined (ARDUINO_ARCH_AVR)
-	#include <SPI.h>
-	#include <Ethernet.h>
-#define COM_SPEED 9600
-#elif defined(ARDUINO_ARCH_ESP8266)
-	#include <ESP8266WiFi.h>
-	#define COM_SPEED 74880
-#elif defined(ARDUINO_ARCH_ESP32)
-	#include <WiFi.h>
-	#define COM_SPEED 115200
-#endif
-
 // ==== Debug and Test options ==================
 #define _DEBUG_
 //#define _TEST_
@@ -24,18 +11,44 @@
 //===== Debugging macros ========================
 #ifdef _DEBUG_
 #define SerialD Serial
-#define _PM(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
-#define _PN(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PM(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PN(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
 #define _PP(a) SerialD.print(a)
 #define _PL(a) SerialD.println(a)
-#define _PX(a) SerialD.println(a, HEX)
+#define _PH(a) SerialD.print(a, HEX)
 #else
 #define _PM(a)
+#define _PN(a)
 #define _PP(a)
 #define _PL(a)
-#define _PX(a)
+#define _PH(a)
 #endif
 
+#if defined (ARDUINO_ARCH_AVR)
+#include <SPI.h>
+#include <Ethernet.h>
+#define COM_SPEED 9600
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
+#define COM_SPEED 74880
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#define COM_SPEED 115200
+#endif
+
+#include <TaskScheduler.h>
+
+#ifdef _TEST_
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#else
+#define PRIMARY_SSID "PAGRABS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#endif // _TEST_
 
 #define ONE_WIRE_BUS 2
 OneWire oneWire(ONE_WIRE_BUS);
@@ -138,7 +151,7 @@ void setup()
 
 #if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 	WiFi.mode(WIFI_STA);
-	WiFi.begin("OSIS", "IBMThinkPad0IBMThinkPad1");
+	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
 	while (WiFi.status() != WL_CONNECTED)
 	{
 		delay(500);

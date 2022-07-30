@@ -18,10 +18,18 @@
 #define _PH(a)
 #endif
 
+#if defined (ARDUINO_ARCH_AVR)
+#include <SPI.h>
+#include <Ethernet.h>
+#define COM_SPEED 9600
+#endif
+
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #define COM_SPEED 74880
-#elif defined(ARDUINO_ARCH_ESP32)
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #define COM_SPEED 115200
 #endif
@@ -47,8 +55,36 @@ Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &t
 void setup()
 {
 	Serial.begin(COM_SPEED);
-	delay(1000);
-	_PL(); _PM("Starting application...");
+	delay(100);
+	_PL("Programm started...");
+
+#if defined (ARDUINO_ARCH_AVR)
+	Ethernet.begin(MAC_ADDRESS);
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		_PP(".");
+	}
+#endif
+
+	_PL("Newtwork connected");
+	_PP("IP address: ");
+
+#if defined (ARDUINO_ARCH_AVR)
+	_PL(Ethernet.localIP());
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	_PL(WiFi.localIP());
+#endif
+
+	_PL("");
+
 
 	tConnectWiFi.enable();
 }
