@@ -35,18 +35,19 @@
 #endif
 
 #include <TaskScheduler.h>
+Scheduler ts;
 
 #ifdef _TEST_
 #define PRIMARY_SSID "OSIS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define MQTT_CLIENT_NAME "flowMeter_test"
 #else
 #define PRIMARY_SSID "PAGRABS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define MQTT_CLIENT_NAME "flowMeter"
 #endif // _TEST_
 
 #define CONNECTION_TIMEOUT 5
-
-Scheduler ts;
 
 void OnConnectWiFi();
 Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);

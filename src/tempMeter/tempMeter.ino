@@ -41,9 +41,11 @@ char msg[MSG_BUFFER_SIZE];
 #ifdef _TEST_
 #define PRIMARY_SSID "OSIS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define MQTT_CLIENT_NAME "tempMeter_test"
 #else
 #define PRIMARY_SSID "PAGRABS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define MQTT_CLIENT_NAME "tempMeter"
 #endif // _TEST_
 
 #define MQTT_SERVER "10.20.30.60"
@@ -77,8 +79,12 @@ Task tConnectMQTT(5 * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &runner);
 void GetTempereature();
 Task tGetTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &GetTempereature, &runner);
 
-void OutputResult();
-Task tOutputResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &OutputResult, &runner);
+void sendResult();
+Task tSendResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &sendResult, &runner);
+
+void outputResult();
+Task tOutputResult(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &outputResult, &runner);
+
 
 void OnConnectWiFi()
 {
@@ -107,7 +113,7 @@ void OnConnectMQTT()
 	if (!mqttClient.connected())
 	{
 		_PM("Attempting MQTT connection...");
-		if (mqttClient.connect("tempMeter"))
+		if (mqttClient.connect(MQTT_CLIENT_NAME))
 		{
 			_PL(" connected!");
 			mqttClient.subscribe("inTopic");
@@ -132,7 +138,7 @@ void GetTempereature()
 	_PM("Temperature difference: "); _PL(diffTemperature);
 }
 
-void OutputResult()
+void sendResult()
 {
 	if (mqttClient.connected())
 	{
@@ -151,6 +157,11 @@ void OutputResult()
 	}
 }
 
+void outputResult();
+{
+
+}
+
 void setup()
 {
 
@@ -165,7 +176,7 @@ void setup()
 	tConnectWiFi.enable();
 	tConnectMQTT.enable();
 	tGetTempereature.enable();
-	tOutputResult.enable();
+	tSendResult.enable();
 }
 
 void loop()

@@ -1,6 +1,6 @@
 // ==== Debug and Test options ==================
 #define _DEBUG_
-//#define _TEST_
+#define _TEST_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -9,13 +9,29 @@
 #define _PN(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
 #define _PP(a) SerialD.print(a)
 #define _PL(a) SerialD.println(a)
-#define _PH(a) SerialD.println(a, HEX)
+#define _PH(a) SerialD.print(a, HEX)
 #else
 #define _PM(a)
 #define _PN(a)
 #define _PP(a)
 #define _PL(a)
 #define _PH(a)
+#endif
+
+#if defined (ARDUINO_ARCH_AVR)
+#include <SPI.h>
+#include <Ethernet.h>
+#define COM_SPEED 9600
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
+#define COM_SPEED 74880
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#define COM_SPEED 115200
 #endif
 
 //#include <stdlib.h>
@@ -58,7 +74,7 @@ void OutputResult()
 
 void setup()
 {
-	Serial.begin(74880);
+	Serial.begin(COM_SPEED);
 	delay(100);
 	_PN("Starting application...");
 
