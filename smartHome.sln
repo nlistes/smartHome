@@ -48,6 +48,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "espTask", "templates\espTas
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rs485", "tests\rs485\rs485.vcxproj", "{860EA64A-75E5-4517-848C-FCFE6383D694}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "valveControl", "src\valveControl\valveControl.vcxproj", "{5B40ED43-8F42-4150-AEFE-DA867E4FB29F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -114,6 +116,10 @@ Global
 		{860EA64A-75E5-4517-848C-FCFE6383D694}.Debug|x86.Build.0 = Debug|Win32
 		{860EA64A-75E5-4517-848C-FCFE6383D694}.Release|x86.ActiveCfg = Release|Win32
 		{860EA64A-75E5-4517-848C-FCFE6383D694}.Release|x86.Build.0 = Release|Win32
+		{5B40ED43-8F42-4150-AEFE-DA867E4FB29F}.Debug|x86.ActiveCfg = Debug|Win32
+		{5B40ED43-8F42-4150-AEFE-DA867E4FB29F}.Debug|x86.Build.0 = Debug|Win32
+		{5B40ED43-8F42-4150-AEFE-DA867E4FB29F}.Release|x86.ActiveCfg = Release|Win32
+		{5B40ED43-8F42-4150-AEFE-DA867E4FB29F}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

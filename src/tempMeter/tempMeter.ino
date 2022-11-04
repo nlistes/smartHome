@@ -1,6 +1,8 @@
 // ==== Debug and Test options ==================
 #define _DEBUG_
 //#define _TEST_
+#define _MQTT_TEST_
+#define _WIFI_TEST_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -18,72 +20,62 @@
 #define _PH(a)
 #endif
 
-#if defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-#define COM_SPEED 74880
-#define ONE_WIRE_BUS D5
-#elif defined(ARDUINO_ARCH_ESP32)
-#include <WiFi.h>
-#define COM_SPEED 115200
-#define ONE_WIRE_BUS 21
+#if defined (ARDUINO_ARCH_AVR)
+#define COM_SPEED 9600
 #endif
 
-#include <TaskScheduler.h>
-#include <PubSubClient.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+#define COM_SPEED 74880
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#define COM_SPEED 115200
+#endif
+
+//#include <stdlib.h>
+//#include <stdio.h>
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// function to print a device address
+void printAddress(DeviceAddress deviceAddress)
+{
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		// zero pad the address if necessary
+		if (deviceAddress[i] < 16) _PP("0");
+		_PH(deviceAddress[i]);
+	}
+}
 
-#define MSG_BUFFER_SIZE	50
-char msg[MSG_BUFFER_SIZE];
+#include <TaskScheduler.h>
+Scheduler ts;
 
+#if defined (ARDUINO_ARCH_AVR)
+#include <SPI.h>
+#include <Ethernet.h>
+#endif
 
-#ifdef _TEST_
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
+WiFiClient ethClient;
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+WiFiClient ethClient;
+#endif
+
+#ifdef _WIFI_TEST_
 #define PRIMARY_SSID "OSIS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
-#define MQTT_CLIENT_NAME "tempMeter_test"
 #else
 #define PRIMARY_SSID "PAGRABS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
-#define MQTT_CLIENT_NAME "tempMeter"
-#endif // _TEST_
+#endif // _WIFI_TEST_
 
-#define MQTT_SERVER "10.20.30.60"
 #define CONNECTION_TIMEOUT 5
-
-#define TEMPERATURE_PRECISION 12
-#define TEMPERATURE_READ_PERIOD 20
-
-Scheduler runner;
-WiFiClient ethClient;
-PubSubClient mqttClient(ethClient);
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
-#ifdef _TEST_
-	DeviceAddress topThermometer = { 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }; // 1
-	DeviceAddress caseThermometer = { 0x28, 0x42, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xC0 }; // 5
-#else
-	DeviceAddress topThermometer = { 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }; // 0
-	DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }; // 3
-#endif // _TEST_
-
-volatile float topTemperature, caseTemperature, diffTemperature;
-
-void OnConnectWiFi();
-Task tConnectWiFi(5 * TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &runner);
-
-void OnConnectMQTT();
-Task tConnectMQTT(5 * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &runner);
-
-void GetTempereature();
-Task tGetTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &GetTempereature, &runner);
-
-void sendResult();
-Task tSendResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &sendResult, &runner);
-
-void outputResult();
-Task tOutputResult(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &outputResult, &runner);
 
 
 void OnConnectWiFi()
@@ -96,23 +88,40 @@ void OnConnectWiFi()
 	{
 		delay(500);
 		_PP(".");
-	}
+}
 
 	_PL(); _PN("CONNECTED!");
-	_PP("IP address: "); _PL(WiFi.localIP());
+	_PM("IP address: "); _PL(WiFi.localIP());
 
 	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);
 
 }
+Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
+
+#ifdef _MQTT_TEST_
+#define MQTT_SERVER "10.20.30.60"
+#define MQTT_CLIENT_NAME "flowMeter_test"
+#else
+#define MQTT_SERVER "10.20.30.71"
+#define MQTT_CLIENT_NAME "flowMeter"
+#endif // _MQTT_TEST_
+
+#include <PubSubClient.h>
+PubSubClient mqttClient(ethClient);
+
+#define MSG_BUFFER_SIZE	10
+char msg[MSG_BUFFER_SIZE];
+
+#define TOPIC_BUFFER_SIZE	40
+char topic[TOPIC_BUFFER_SIZE];
 
 void OnConnectMQTT()
 {
-	mqttClient.setServer(MQTT_SERVER, 1883);
 	if (!mqttClient.connected())
 	{
-		_PM("Attempting MQTT connection...");
+		_PL();  _PM("Attempting MQTT connection... ");
 		if (mqttClient.connect(MQTT_CLIENT_NAME))
 		{
 			_PL(" connected!");
@@ -122,14 +131,47 @@ void OnConnectMQTT()
 		{
 			_PM("failed, rc="); _PL(mqttClient.state());
 		}
-	}
-}
 
-void GetTempereature()
+	}
+
+}
+Task tConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &ts);
+
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#define ONE_WIRE_BUS D5
+#elif defined(ARDUINO_ARCH_ESP32)
+#define ONE_WIRE_BUS 21
+#endif
+
+#define TEMPERATURE_PRECISION 12
+#define TEMPERATURE_READ_PERIOD 20
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+
+#ifdef _TEST_
+	DeviceAddress topThermometer = { 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }; // 1
+	DeviceAddress caseThermometer = { 0x28, 0x42, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xC0 }; // 5
+#else
+	DeviceAddress topThermometer = { 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }; // 0
+	DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }; // 3
+#endif // _TEST_
+
+volatile float topTemperature, caseTemperature, diffTemperature;
+
+void OnPrepareTemperature()
 {
 	_PL();  _PN("Requesting temperatures... ");
 	sensors.requestTemperatures();
 	_PN("DONE");
+}
+Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &OnPrepareTemperature, &ts);
+
+
+void GetTempereature()
+{
 	topTemperature = sensors.getTempC(topThermometer);
 	caseTemperature = sensors.getTempC(caseThermometer);
 	diffTemperature = topTemperature - caseTemperature;
@@ -137,6 +179,7 @@ void GetTempereature()
 	_PM("Sensor ");  _PP("[");  printAddress(caseThermometer); _PP("] temp: "); _PL(caseTemperature);
 	_PM("Temperature difference: "); _PL(diffTemperature);
 }
+Task tGetTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &GetTempereature, &ts);
 
 void sendResult()
 {
@@ -156,22 +199,50 @@ void sendResult()
 
 	}
 }
+Task tSendResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &sendResult, &ts);
 
-void outputResult();
+void outputResult()
 {
 
 }
+Task tOutputResult(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &outputResult, &ts);
+
+
+//void outputResult()
 
 void setup()
 {
-
 	Serial.begin(COM_SPEED);
-	delay(1000);
-	_PM("Starting application...");
+	delay(100);
+	_PL("Programm started...");
 
-	//sensors.begin();
-	sensors.setResolution(topThermometer, TEMPERATURE_PRECISION);
-	sensors.setResolution(caseThermometer, TEMPERATURE_PRECISION);
+#if defined (ARDUINO_ARCH_AVR)
+	Ethernet.begin(MAC_ADDRESS);
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		_PP(".");
+	}
+#endif
+
+	_PL("Newtwork connected");
+	_PP("IP address: ");
+
+#if defined (ARDUINO_ARCH_AVR)
+	_PL(Ethernet.localIP());
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
+	_PL(WiFi.localIP());
+#endif
+
+	_PL("");
+
 
 	tConnectWiFi.enable();
 	tConnectMQTT.enable();
@@ -182,17 +253,5 @@ void setup()
 void loop()
 {
 	mqttClient.loop();
-	runner.execute();
+	ts.execute();
 }
-
-// function to print a device address
-void printAddress(DeviceAddress deviceAddress)
-{
-	for (uint8_t i = 0; i < 8; i++)
-	{
-		// zero pad the address if necessary
-		if (deviceAddress[i] < 16) _PP("0");
-		_PH(deviceAddress[i]);
-	}
-}
-
