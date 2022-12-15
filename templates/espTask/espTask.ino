@@ -61,39 +61,41 @@ WiFiClient ethClient;
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
-#define CONNECTION_TIMEOUT 5
+#define CONNECTION_TIMEOUT 15
 
 #if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 void OnConnectWiFi()
 {
-	_PL(); _PM("Connecting to "); _PP(PRIMARY_SSID);
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
-
-	while (WiFi.status() != WL_CONNECTED)
+	if (WiFi.status() != WL_CONNECTED)
 	{
-		delay(500);
-		_PP(".");
+		_PM("Connecting to "); _PP(PRIMARY_SSID);
+		WiFi.mode(WIFI_STA);
+		WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
+
+		while (WiFi.status() != WL_CONNECTED)
+		{
+			delay(500);
+			_PP(".");
+		}
+
+		_PL(); _PN("CONNECTED!");
+		_PM("IP address: "); _PL(WiFi.localIP());
+
+		// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
+		WiFi.setAutoReconnect(true);
+		WiFi.persistent(true);
 	}
-
-	_PL(); _PN("CONNECTED!");
-	_PM("IP address: "); _PL(WiFi.localIP());
-
-	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-	WiFi.setAutoReconnect(true);
-	WiFi.persistent(true);
-
 }
-Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
+Task tConnectWiFi(CONNECTION_TIMEOUT * TASK_SECOND, TASK_FOREVER, &OnConnectWiFi, &ts);
 #endif
 
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.60"
-#define MQTT_CLIENT_NAME "flowMeter_test"
+#define MQTT_CLIENT_NAME "espTask_test"
 #else
 #define MQTT_SERVER "10.20.30.71"
-#define MQTT_CLIENT_NAME "flowMeter"
+#define MQTT_CLIENT_NAME "espTask"
 #endif // _MQTT_TEST_
 
 #include <PubSubClient.h>
@@ -134,35 +136,15 @@ void setup()
 
 #if defined (ARDUINO_ARCH_AVR)
 	Ethernet.begin(MAC_ADDRESS);
-#endif
-
-#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(500);
-		_PP(".");
-	}
-#endif
-
 	_PL("Newtwork connected");
-	_PP("IP address: ");
-
-#if defined (ARDUINO_ARCH_AVR)
-	_PL(Ethernet.localIP());
+	_PP("IP address: "); _PL(Ethernet.localIP());
 #endif
-
-#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
-	_PL(WiFi.localIP());
-#endif
-
-	_PL("");
-
 
 #if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 	tConnectWiFi.enable();
 #endif
+
+	_PL("");
 }
 
 void loop()

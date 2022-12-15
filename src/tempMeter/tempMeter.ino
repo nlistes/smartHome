@@ -102,10 +102,10 @@ Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &t
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.60"
-#define MQTT_CLIENT_NAME "flowMeter_test"
+#define MQTT_CLIENT_NAME "tempMeter_test"
 #else
 #define MQTT_SERVER "10.20.30.71"
-#define MQTT_CLIENT_NAME "flowMeter"
+#define MQTT_CLIENT_NAME "tempMeter"
 #endif // _MQTT_TEST_
 
 #include <PubSubClient.h>
