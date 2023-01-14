@@ -20,6 +20,10 @@
 #define _PML(a)
 #endif
 
+#if defined (ARDUINO_ARCH_AVR)
+#define COM_SPEED 9600
+#endif
+
 #if defined(ARDUINO_ARCH_ESP8266)
 #define COM_SPEED 74880
 #endif
@@ -33,6 +37,11 @@
 
 #include <TaskScheduler.h>
 Scheduler ts;
+
+#if defined (ARDUINO_ARCH_AVR)
+#include <SPI.h>
+#include <Ethernet.h>
+#endif
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
@@ -54,6 +63,7 @@ WiFiClient ethClient;
 
 #define CONNECTION_TIMEOUT 10
 
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 void OnConnectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
@@ -77,7 +87,8 @@ void OnConnectWiFi()
 		WiFi.persistent(true);
 	}
 }
-Task tConnectWiFi(CONNECTION_TIMEOUT * TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
+Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
+#endif
 
 
 #ifdef _MQTT_TEST_
@@ -114,7 +125,7 @@ void OnConnectMQTT()
 	}
 
 }
-Task tConnectMQTT(CONNECTION_TIMEOUT * TASK_SECOND, TASK_FOREVER, &OnConnectMQTT, &ts);
+Task tConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &OnConnectMQTT, &ts);
 
 void OnRunMQTT()
 {
@@ -133,7 +144,7 @@ void OnSendTest()
 		_PMP(topic); _PP(" = ");  _PL(msg);
 	}
 }
-Task tSendTest(CONNECTION_TIMEOUT * TASK_SECOND, TASK_FOREVER, &OnSendTest, &ts);
+Task tSendTest(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &OnSendTest, &ts);
 #endif // _TEST_
 
 
@@ -145,7 +156,15 @@ void setup()
 	delay(100);
 	_PL(""); _PML("Programm started...");
 
+#if defined (ARDUINO_ARCH_AVR)
+	Ethernet.begin(MAC_ADDRESS);
+	_PL("Newtwork connected");
+	_PP("IP address: "); _PL(Ethernet.localIP());
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 	tConnectWiFi.enable();
+#endif
 
 	mqttClient.setServer(MQTT_SERVER, 1883);
 	//mqttClient.setCallback(mqtt_callback);

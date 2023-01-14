@@ -1,23 +1,23 @@
 // ==== Debug and Test options ==================
 #define _DEBUG_
 //#define _TEST_
-#define _MQTT_TEST_
+//#define _MQTT_TEST_
 #define _WIFI_TEST_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
 #define SerialD Serial
-#define _PM(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
-#define _PN(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
 #define _PP(a) SerialD.print(a)
 #define _PL(a) SerialD.println(a)
 #define _PH(a) SerialD.print(a, HEX)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
 #else
-#define _PM(a)
-#define _PN(a)
 #define _PP(a)
 #define _PL(a)
 #define _PH(a)
+#define _PMP(a)
+#define _PML(a)
 #endif
 
 #if defined (ARDUINO_ARCH_AVR)
@@ -61,14 +61,14 @@ WiFiClient ethClient;
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
-#define CONNECTION_TIMEOUT 15
+#define CONNECTION_TIMEOUT 10
 
 #if defined(ARDUINO_ARCH_ESP8266) || (defined ARDUINO_ARCH_ESP32)
 void OnConnectWiFi()
 {
 	if (WiFi.status() != WL_CONNECTED)
 	{
-		_PM("Connecting to "); _PP(PRIMARY_SSID);
+		_PL(""); _PMP("Connecting to "); _PP(PRIMARY_SSID);
 		WiFi.mode(WIFI_STA);
 		WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
 
@@ -78,24 +78,25 @@ void OnConnectWiFi()
 			_PP(".");
 		}
 
-		_PL(); _PN("CONNECTED!");
-		_PM("IP address: "); _PL(WiFi.localIP());
+		_PL(); _PML("CONNECTED!");
+		_PMP("IP address: "); _PL(WiFi.localIP());
+		//_PL(WiFi.localIP().toString);
 
 		// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
 		WiFi.setAutoReconnect(true);
 		WiFi.persistent(true);
 	}
 }
-Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &OnConnectWiFi, &ts);
+Task tConnectWiFi(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
 #endif
 
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.60"
-#define MQTT_CLIENT_NAME "valveControl_test"
+#define MQTT_CLIENT_NAME "espTask_test"
 #else
-#define MQTT_SERVER "10.20.30.71"
-#define MQTT_CLIENT_NAME "valveControl"
+#define MQTT_SERVER "10.20.30.70"
+#define MQTT_CLIENT_NAME "espTask"
 #endif // _MQTT_TEST_
 
 #include <PubSubClient.h>
@@ -111,24 +112,65 @@ void OnConnectMQTT()
 {
 	if (!mqttClient.connected())
 	{
-		mqttClient.setServer(MQTT_SERVER, 1883);
-		_PL();  _PM("Attempting MQTT connection... ");
+		_PL();  _PMP("Connecting to MQTT... ");
 		if (mqttClient.connect(MQTT_CLIENT_NAME))
 		{
 			_PL(" connected!");
-			mqttClient.subscribe("inTopic");
+			mqttClient.subscribe("tempmeter/boiler/valve");
 		}
 		else
 		{
-			_PL("");  _PM("failed, rc="); _PL(mqttClient.state());
+			_PP("failed, rc="); _PL(mqttClient.state());
 		}
 	}
+
 }
-Task tConnectMQTT(CONNECTION_TIMEOUT * TASK_SECOND, TASK_FOREVER, &OnConnectMQTT, &ts);
+Task tConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &OnConnectMQTT, &ts);
+
+#define MOTOR_PIN 23
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
+{
+	Serial.print("Message arrived [");
+	Serial.print(topic);
+	Serial.print("] ");
+	for (int i = 0; i < length; i++)
+	{
+		Serial.print((char)payload[i]);
+	}
+	Serial.println();
+
+	if ((char)payload[0] == '1')
+	{
+		digitalWrite(MOTOR_PIN, HIGH);   // Turn the LED on (Active low on the ESP-01)
+	}
+	else
+	{
+		digitalWrite(MOTOR_PIN, LOW);  // Turn the LED off by making the voltage HIGH
+	}
+
+}
+
+
+#ifdef _TEST_
+void OnSendTest()
+{
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "test");
+		snprintf(topic, TOPIC_BUFFER_SIZE, "test/test");
+		mqttClient.publish(topic, msg);
+		_PMP(topic); _PP(" = ");  _PL(msg);
+	}
+}
+Task tSendTest(5 * TASK_SECOND, TASK_FOREVER, &OnSendTest, &ts);
+#endif // _TEST_
+
 
 
 void setup()
 {
+	delay(5000);
 	Serial.begin(COM_SPEED);
 	delay(100);
 	_PL("Programm started...");
@@ -143,11 +185,17 @@ void setup()
 	tConnectWiFi.enable();
 #endif
 
-	_PL("");
+	mqttClient.setServer(MQTT_SERVER, 1883);
+	mqttClient.setCallback(mqtt_callback);
+
 	tConnectMQTT.enable();
 
-	mqttClient.setServer(MQTT_SERVER, 1883);
-	//mqttClient.setCallback(callback);
+#ifdef _TEST_
+	tSendTest.enable();
+#endif // _TEST_
+
+	pinMode(MOTOR_PIN, OUTPUT);
+
 }
 
 void loop()
