@@ -146,7 +146,7 @@ Task tConnectMQTT(CONNECTION_TIMEOUT * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &
 #if defined(ARDUINO_ARCH_ESP8266)
 volatile uint8_t btnPins[MAX_FLOW_COUNTERS] = { D1, D2, D5, D6, D7 }; // Boileris, Bypass, Floor, 1_floor, 2_floor
 #elif defined(ARDUINO_ARCH_ESP32)
-volatile uint8_t btnPins[MAX_FLOW_COUNTERS] = { 19, 18, 20 };
+volatile uint8_t btnPins[MAX_FLOW_COUNTERS] = { 22, 21, 18, 19, 23 };
 #endif
 
 volatile uint32_t btnPressedTime[MAX_FLOW_COUNTERS], btnPreviousPressedTime[MAX_FLOW_COUNTERS], btnDurationBetweenPresses[MAX_FLOW_COUNTERS];
@@ -155,6 +155,9 @@ volatile uint16_t flowMeterValueSummary, flowSpeedSummary;
 
 void OnButtonPressed_0();
 Task tButtonPressed_0(TASK_IMMEDIATE, TASK_ONCE, &OnButtonPressed_0, &ts);
+void OnButtonReleased_0();
+Task tButtonReleased_0(TASK_IMMEDIATE, TASK_ONCE, &OnButtonReleased_0, &ts);
+
 void OnButtonPressed_1();
 Task tButtonPressed_1(TASK_IMMEDIATE, TASK_ONCE, &OnButtonPressed_1, &ts);
 void OnButtonPressed_2();
@@ -164,8 +167,6 @@ Task tButtonPressed_3(TASK_IMMEDIATE, TASK_ONCE, &OnButtonPressed_3, &ts);
 void OnButtonPressed_4();
 Task tButtonPressed_4(TASK_IMMEDIATE, TASK_ONCE, &OnButtonPressed_4, &ts);
 
-void OnButtonReleased_0();
-Task tButtonReleased_0(TASK_IMMEDIATE, TASK_ONCE, &OnButtonReleased_0, &ts);
 void OnButtonReleased_1();
 Task tButtonReleased_1(TASK_IMMEDIATE, TASK_ONCE, &OnButtonReleased_1, &ts);
 void OnButtonReleased_2();
@@ -251,6 +252,13 @@ void IRAM_ATTR pressButtonISR_0()
 
 }
 
+void IRAM_ATTR releaseButtonISR_0()
+{
+	int8_t btnOnISR = 0;
+	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
+	tButtonReleased_0.restartDelayed(BNT_DEBOUNCE);
+}
+
 void IRAM_ATTR pressButtonISR_1()
 {
 	int8_t btnOnISR = 1;
@@ -281,13 +289,6 @@ void IRAM_ATTR pressButtonISR_4()
 	btnPressedTime[btnOnISR] = millis();
 	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
 	tButtonPressed_4.restartDelayed(BNT_DEBOUNCE);
-}
-
-void IRAM_ATTR releaseButtonISR_0()
-{
-	int8_t btnOnISR = 0;
-	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
-	tButtonReleased_0.restartDelayed(BNT_DEBOUNCE);
 }
 
 void IRAM_ATTR releaseButtonISR_1()
@@ -429,7 +430,7 @@ void OnButtonReleased_4()
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
-#define ONE_WIRE_BUS 23
+#define ONE_WIRE_BUS 17
 #endif
 
 OneWire oneWire(ONE_WIRE_BUS);
