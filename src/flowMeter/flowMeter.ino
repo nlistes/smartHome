@@ -1,115 +1,143 @@
-﻿// ==== Debug and Test options ==================
-#define _DEBUG_
-#define _TEST_
-#define _MQTT_TEST_
-//#define _WIFI_TEST_
-
-//===== Debugging macros ========================
-#ifdef _DEBUG_
-#define SerialD Serial
-#define _PM(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
-#define _PN(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
-#define _PP(a) SerialD.print(a)
-#define _PL(a) SerialD.println(a)
-#define _PH(a) SerialD.print(a, HEX)
-#else
-#define _PM(a)
-#define _PN(a)
-#define _PP(a)
-#define _PL(a)
-#define _PH(a)
-#endif
-
-#if defined (ARDUINO_ARCH_AVR)
-	#define COM_SPEED 9600
-#endif
-
-#if defined(ARDUINO_ARCH_ESP8266)
-	#define COM_SPEED 74880
-#endif
-
-#if defined(ARDUINO_ARCH_ESP32)
-	#define COM_SPEED 115200
-#endif
-
-//#include <stdlib.h>
-//#include <stdio.h>
-
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
-// function to print a device address
-void printOneWireAddress(DeviceAddress deviceAddress)
-{
-	for (uint8_t i = 0; i < 8; i++)
-	{
-		// zero pad the address if necessary
-		if (deviceAddress[i] < 16) _PP("0");
-		_PH(deviceAddress[i]);
-	}
-}
-
-#include <TaskScheduler.h>
-Scheduler ts;
-
-#if defined (ARDUINO_ARCH_AVR)
-#include <SPI.h>
-#include <Ethernet.h>
-#endif
-
-#if defined(ARDUINO_ARCH_ESP8266)
+﻿#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
-WiFiClient ethClient;
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
+#endif
+
+#include <TaskScheduler.h>
+#include <PubSubClient.h>
+
+
+//#include <stdlib.h>
+//#include <stdio.h>
+
+// ==== Debug options ==================
+#define _DEBUG_
+#define _DEBUG_SYSTEM_
+#define _DEBUG_INTERNAL_
+#define _DEBUG_EXTERNAL_
+
+//===== Debugging macros ========================
+#ifdef _DEBUG_
+#define SerialD Serial
+#define _PP(a) SerialD.print(a)
+#define _PL(a) SerialD.println(a)
+#define _PH(a) SerialD.print(a, HEX)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
+#else
+#define _PP(a)
+#define _PL(a)
+#define _PH(a)
+#define _PMP(a)
+#define _PML(a)
+#endif
+
+//===== Debug level SYSTEM ========================
+#ifdef _DEBUG_SYSTEM_
+#define SerialS Serial
+#define _S_PP(a) SerialS.print(a)
+#define _S_PL(a) SerialS.println(a)
+#define _S_PH(a) SerialS.print(a, HEX)
+#define _S_PMP(a) SerialS.print(millis()); SerialS.print(": "); SerialS.print(a)
+#define _S_PML(a) SerialS.print(millis()); SerialS.print(": "); SerialS.println(a)
+#else
+#define _S_PP(a)
+#define _S_PL(a)
+#define _S_PH(a)
+#define _S_PMP(a)
+#define _S_PML(a)
+#endif
+
+//===== Debug level INTERNAL ========================
+#ifdef _DEBUG_INTERNAL_
+#define SerialI Serial
+#define _I_PP(a) SerialI.print(a)
+#define _I_PL(a) SerialI.println(a)
+#define _I_PH(a) SerialI.print(a, HEX)
+#define _I_PMP(a) SerialI.print(millis()); SerialI.print(": "); SerialI.print(a)
+#define _I_PML(a) SerialI.print(millis()); SerialI.print(": "); SerialI.println(a)
+#else
+#define _I_PP(a)
+#define _I_PL(a)
+#define _I_PH(a)
+#define _I_PMP(a)
+#define _I_PML(a)
+#endif
+
+//===== Debug level EXTERNAL ========================
+#ifdef _DEBUG_EXTERNAL_
+#define SerialE Serial
+#define _E_PP(a) SerialE.print(a)
+#define _E_PL(a) SerialE.println(a)
+#define _E_PH(a) SerialE.print(a, HEX)
+#define _E_PMP(a) SerialE.print(millis()); SerialE.print(": "); SerialE.print(a)
+#define _E_PML(a) SerialE.print(millis()); SerialE.print(": "); SerialE.println(a)
+#else
+#define _E_PP(a)
+#define _E_PL(a)
+#define _E_PH(a)
+#define _E_PMP(a)
+#define _E_PML(a)
+#endif
+
+// ==== Test options ==================
+#define _TEST_
+//#define _MQTT_TEST_
+#define _WIFI_TEST_
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#define COM_SPEED 74880
+WiFiClient ethClient;
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#define COM_SPEED 115200
 WiFiClient ethClient;
 #endif
 
 #ifdef _WIFI_TEST_
-#define PRIMARY_SSID "OSIS"
+#define PRIMARY_SSID "PAGRABS2"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #else
 #define PRIMARY_SSID "PAGRABS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
-#define CONNECTION_TIMEOUT 5
+#define CONNECTION_TIMEOUT 10
 
+Scheduler ts;
 
-void OnConnectWiFi()
+void OnWiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 {
-	//_PL(); _PM("Connecting to "); _PP(PRIMARY_SSID);
-	WiFi.mode(WIFI_STA);
-	//WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
-
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(500);
-		_PP(".");
-	}
-
-	_PL(); _PN("CONNECTED!");
-	_PM("IP address: "); _PL(WiFi.localIP());
-
-	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
-	WiFi.setAutoReconnect(true);
-	WiFi.persistent(true);
+	digitalWrite(LED_BUILTIN, HIGH);
+	_S_PMP("Connected to: ");  _S_PL(PRIMARY_SSID);
 }
-Task tConnectWiFi(CONNECTION_TIMEOUT * TASK_SECOND, TASK_ONCE, &OnConnectWiFi, &ts);
 
+void OnWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+	_S_PMP("IP address: "); _S_PL(WiFi.localIP());
+}
+
+void OnWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+	digitalWrite(LED_BUILTIN, LOW);
+	//_S_PMP("Disconnected! Reason: "); _S_PL(info.wifi_sta_disconnected.reason);
+}
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.60"
-#define MQTT_CLIENT_NAME "flowMeter_test"
+#define MQTT_CLIENT_NAME "espTask_test"
 #else
-#define MQTT_SERVER "10.20.30.71"
-#define MQTT_CLIENT_NAME "flowMeter"
+#define MQTT_SERVER "10.20.30.81"
+#define MQTT_CLIENT_NAME "espTask-"
 #endif // _MQTT_TEST_
 
-#include <PubSubClient.h>
 PubSubClient mqttClient(ethClient);
+
+String mqttClientId = MQTT_CLIENT_NAME;
 
 #define MSG_BUFFER_SIZE	10
 char msg[MSG_BUFFER_SIZE];
@@ -121,21 +149,50 @@ void OnConnectMQTT()
 {
 	if (!mqttClient.connected())
 	{
-		_PL();  _PM("Attempting MQTT connection... ");
-		if (mqttClient.connect(MQTT_CLIENT_NAME))
+		_S_PL();  _S_PMP("Connecting ");  _S_PP(mqttClientId.c_str()); _S_PP(" to MQTT["); _S_PP(MQTT_SERVER); _S_PP("] ");
+		if (mqttClient.connect(mqttClientId.c_str()))
 		{
-			_PL(" connected!");
-			mqttClient.subscribe("inTopic");
+			_S_PL("MQTT CONNECTED!");
+			//mqttClient.subscribe("inTopic");
 		}
 		else
 		{
-			_PM("failed, rc="); _PL(mqttClient.state());
+			_S_PP("FAILED!!! rc="); _S_PL(mqttClient.state());
 		}
-
 	}
-
 }
-Task tConnectMQTT(CONNECTION_TIMEOUT * TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &ts);
+Task tConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &OnConnectMQTT, &ts);
+
+void OnRunMQTT()
+{
+	mqttClient.loop();
+}
+Task tRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &OnRunMQTT, &ts);
+
+#ifdef _TEST_
+#define DATA_SEND_INTERVAL	60
+uint16_t test_value = 0;
+
+void OnGetTestValue()
+{
+	test_value++;
+	_I_PMP("Counter: "); _I_PL(test_value);
+}
+Task tGetTestValue(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &OnGetTestValue, &ts);
+
+void OnSendTest()
+{
+	OnConnectMQTT();
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "test/test2");
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+	}
+}
+Task tSendTest(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &OnSendTest, &ts);
+#endif // _TEST_
 
 
 #define MAX_FLOW_COUNTERS 5
@@ -438,8 +495,6 @@ DallasTemperature sensors(&oneWire);
 
 #define MAX_TEMPERATURE_SENSORS 5
 #define ACTUAL_TEMPERATURE_SENSORS 5
-#define TEMPERATURE_READ_PERIOD 5
-#define TEMPERATURE_PRECISION 12
 
 DeviceAddress inThermometer[MAX_TEMPERATURE_SENSORS] =
 {
@@ -476,8 +531,6 @@ void OnPrepareTemperature()
 	_PL();  _PN("Requesting temperatures... ");
 	sensors.requestTemperatures();
 	_PN("DONE");
-	tGetTempereature.restartDelayed(1 * TASK_SECOND);
-
 }
 Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &OnPrepareTemperature, &ts);
 
@@ -603,89 +656,4 @@ void loop()
 }
 
 
-//DeviceAddress inThermometerMain = { 0x28, 0x0C, 0xF5, 0x66, 0x04, 0x00, 0x00, 0x10 }; // 2
-//DeviceAddress outThermometerMain = { 0x28, 0xFA, 0xA7, 0x97, 0x04, 0x00, 0x00, 0x38 }; // 9
-//
-//DeviceAddress inThermometerCommon = { 0x28, 0x0C, 0xF5, 0x66, 0x04, 0x00, 0x00, 0x10 }; // 2
-//DeviceAddress outThermometerCommon = { 0x28, 0xFA, 0xA7, 0x97, 0x04, 0x00, 0x00, 0x38 }; // 9
-//
-//DeviceAddress inThermometerBypass = { 0x28, 0x02, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xB5 }; // 4
-//DeviceAddress outThermometerBypass = { 0x28, 0x2E, 0xE1, 0x66, 0x04, 0x00, 0x00, 0xAB }; // 10
-//DeviceAddress inThermometerWarmFloor = { 0x28, 0x02, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xB5 }; // 4
-//DeviceAddress outThermometerWarmFloor = { 0x28, 0x2E, 0xE1, 0x66, 0x04, 0x00, 0x00, 0xAB }; // 10
-//DeviceAddress inThermometerFirstFloor = { 0x28, 0x02, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xB5 }; // 4
-//DeviceAddress outThermometerFirstFloor = { 0x28, 0x2E, 0xE1, 0x66, 0x04, 0x00, 0x00, 0xAB }; // 10
-//DeviceAddress inThermometerBoiler = { 0x28, 0x25, 0xDB, 0x66, 0x04, 0x00, 0x00, 0x6A }; // 11
-//DeviceAddress outThermometerBoiler = { 0x28, 0xE2, 0xE1, 0x66, 0x04, 0x00, 0x00, 0x49 }; // 6
-//DeviceAddress inThermometerSecondFloor = { 0x28, 0x02, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xB5 }; // 4
-//DeviceAddress outThermometerSecondFloor = { 0x28, 0x2E, 0xE1, 0x66, 0x04, 0x00, 0x00, 0xAB }; // 10
-
-//volatile float tempInMain, tempOutMain, tempDiffMain;
-//volatile float tempInCommon, tempOutCommon, tempDiffCommon;
-//volatile float tempInBypass, tempOutBypass, tempDiffBypass;
-//volatile float tempInBoiler, tempOutBoiler, tempDiffBoiler;
-
-	//tempInMain = sensors.getTempC(inThermometerMain);
-	//tempOutMain = sensors.getTempC(outThermometerMain);
-	//tempDiffMain = tempInMain - tempOutMain;
-
-	//_PM("Sensor ");  _PP("[");  printAddress(inThermometerMain); _PP("] temp: "); _PL(tempInMain);
-	//_PM("Sensor ");  _PP("[");  printAddress(outThermometerMain); _PP("] temp: "); _PL(tempOutMain);
-	//_PM("Temperature difference: "); _PL(tempDiffMain);
-	//tempInBoiler = sensors.getTempC(inThermometerBoiler);
-	//tempOutBoiler = sensors.getTempC(outThermometerBoiler);
-	//tempDiffBoiler = tempInBoiler - tempOutBoiler;
-	//_PM("Sensor ");  _PP("[");  printAddress(inThermometerBoiler); _PP("] temp: "); _PL(tempInBoiler);
-	//_PM("Sensor ");  _PP("[");  printAddress(outThermometerBoiler); _PP("] temp: "); _PL(tempOutBoiler);
-	//_PM("Temperature difference: "); _PL(tempDiffBoiler);
-
-	//tempInBypass = sensors.getTempC(inThermometerBypass);
-	//tempOutBypass = sensors.getTempC(outThermometerBypass);
-	//tempDiffBypass = tempInBypass - tempOutBypass;
-	//_PM("Sensor ");  _PP("[");  printAddress(inThermometerBypass); _PP("] temp: "); _PL(tempInBypass);
-	//_PM("Sensor ");  _PP("[");  printAddress(outThermometerBypass); _PP("] temp: "); _PL(tempOutBypass);
-	//_PM("Temperature difference: "); _PL(tempDiffBypass);
-
-	//sensors.setResolution(inThermometerMain, TEMPERATURE_PRECISION);
-	//sensors.setResolution(outThermometerMain, TEMPERATURE_PRECISION);
-	//sensors.setResolution(inThermometerBypass, TEMPERATURE_PRECISION);
-	//sensors.setResolution(outThermometerBypass, TEMPERATURE_PRECISION);
-	//sensors.setResolution(inThermometerBoiler, TEMPERATURE_PRECISION);
-	//sensors.setResolution(outThermometerBoiler, TEMPERATURE_PRECISION);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempInCommon);
-		//mqttClient.publish("flowmeter/common/temp/in", msg);
-		//_PM("flowmeter/common/temp/in = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempOutCommon);
-		//mqttClient.publish("flowmeter/common/temp/out", msg);
-		//_PM("flowmeter/common/temp/out = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempDiffCommon);
-		//mqttClient.publish("flowmeter/common/temp/diff", msg);
-		//_PM("flowmeter/common/temp/diff = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempInBoiler);
-		//mqttClient.publish("flowmeter/1/temp/in", msg);
-		//_PM("flowmeter/1/temp/in = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempOutBoiler);
-		//mqttClient.publish("flowmeter/1/temp/out", msg);
-		//_PM("flowmeter/1/temp/out = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempDiffBoiler);
-		//mqttClient.publish("flowmeter/1/temp/diff", msg);
-		//_PM("flowmeter/1/temp/diff = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempInMain);
-		//mqttClient.publish("flowmeter/2/temp/in", msg);
-		//_PM("flowmeter/2/temp/in = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempOutMain);
-		//mqttClient.publish("flowmeter/2/temp/out", msg);
-		//_PM("flowmeter/2/temp/out = "); _PL(msg);
-
-		//snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempDiffMain);
-		//mqttClient.publish("flowmeter/2/temp/diff", msg);
-		//_PM("flowmeter/2/temp/diff = "); _PL(msg);
 
