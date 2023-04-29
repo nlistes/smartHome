@@ -19,9 +19,26 @@
 //#include <stdio.h>
 
 // ==== Debug options ==================
+#define _DEBUG_
 #define _DEBUG_SYSTEM_
 #define _DEBUG_INTERNAL_
 #define _DEBUG_EXTERNAL_
+
+//===== Debugging macros ========================
+#ifdef _DEBUG_
+#define SerialD Serial
+#define _PP(a) SerialD.print(a)
+#define _PL(a) SerialD.println(a)
+#define _PH(a) SerialD.print(a, HEX)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
+#else
+#define _PP(a)
+#define _PL(a)
+#define _PH(a)
+#define _PMP(a)
+#define _PML(a)
+#endif
 
 //===== Debug level SYSTEM ========================
 #ifdef _DEBUG_SYSTEM_

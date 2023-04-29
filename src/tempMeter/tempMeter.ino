@@ -72,9 +72,9 @@
 #endif
 
 // ==== Test options ==================
-#define _TEST_
-//#define _MQTT_TEST_
-#define _WIFI_TEST_
+//#define _TEST_
+#define _MQTT_TEST_
+//#define _WIFI_TEST_
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #define COM_SPEED 74880
@@ -118,7 +118,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.60"
-#define MQTT_CLIENT_NAME "espTask_test"
+#define MQTT_CLIENT_NAME "espTask_test-"
 #else
 #define MQTT_SERVER "10.20.30.81"
 #define MQTT_CLIENT_NAME "espTask-"
@@ -163,7 +163,7 @@ Task taskRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &onRunMQTT, &ts);
 #if defined(ARDUINO_ARCH_ESP8266)
 #define ONE_WIRE_BUS D5
 #elif defined(ARDUINO_ARCH_ESP32)
-#define ONE_WIRE_BUS 21
+#define ONE_WIRE_BUS 18
 #endif
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -182,7 +182,7 @@ void printOneWireAddress(DeviceAddress deviceAddress)
 
 #ifdef _TEST_
 DeviceAddress topThermometer = { 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }; // 1
-DeviceAddress caseThermometer = { 0x28, 0x42, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xC0 }; // 5
+DeviceAddress caseThermometer = { 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C }; // 08. 28 DA 4A 9C 04 00 00 2C
 #else
 DeviceAddress topThermometer = { 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }; // 0
 DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }; // 3
@@ -190,33 +190,8 @@ DeviceAddress caseThermometer = { 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96
 
 volatile float topTemperature, caseTemperature;
 
-#define TEMPERATURE_PRECISION 12
-#define TEMPERATURE_READ_PERIOD 5
-
-void onGetTempereature()
-{
-	topTemperature = sensors.getTempC(topThermometer);
-	caseTemperature = sensors.getTempC(caseThermometer);
-}
-Task taskGetTempereature(TASK_IMMEDIATE, TASK_ONCE, &onGetTempereature, &ts);
-
-
-void onPrepareTemperature()
-{
-	_I_PL();  _I_PML("Requesting temperatures... ");
-	sensors.requestTemperatures();
-	_I_PML("DONE");
-	taskGetTempereature.restartDelayed(1 * TASK_SECOND);
-}
-Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onPrepareTemperature, &ts);
-
-
-void onShowTemperature()
-{
-	_I_PMP("Sensor ");  _I_PP("[");  printOneWireAddress(topThermometer); _I_PP("] temp TOP: "); _I_PL(topTemperature);
-	_I_PMP("Sensor ");  _I_PP("[");  printOneWireAddress(caseThermometer); _I_PP("] temp CASE: "); _I_PL(caseTemperature);
-}
-Task taskShowTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onShowTemperature, &ts);
+#define TEMPERATURE_PRECISION 10
+#define TEMPERATURE_READ_PERIOD 15
 
 #define MQTT_TOPIC_BOILER_TOP "tempmeter/boiler/temp/top"
 #define MQTT_TOPIC_BOILER_CASE "tempmeter/boiler/temp/case"
@@ -225,17 +200,48 @@ void onSendResult()
 {
 	onConnectMQTT();
 	if (mqttClient.connected())
-	{
-		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", topTemperature);
-		mqttClient.publish(MQTT_TOPIC_BOILER_TOP, msg);
-		_E_PMP(MQTT_TOPIC_BOILER_TOP); _E_PP(" = "); _E_PL(msg);
+		if ((topTemperature > 0) && (caseTemperature > 0))
+		{
+			snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", topTemperature);
+			mqttClient.publish(MQTT_TOPIC_BOILER_TOP, msg);
+			_E_PMP(MQTT_TOPIC_BOILER_TOP); _E_PP(" = "); _E_PL(msg);
 
-		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", caseTemperature);
-		mqttClient.publish(MQTT_TOPIC_BOILER_CASE, msg);
-		_E_PMP(MQTT_TOPIC_BOILER_CASE); _E_PP(" = "); _E_PL(msg);
-	}
+			snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", caseTemperature);
+			mqttClient.publish(MQTT_TOPIC_BOILER_CASE, msg);
+			_E_PMP(MQTT_TOPIC_BOILER_CASE); _E_PP(" = "); _E_PL(msg);
+		}
 }
-Task taskSendResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onSendResult, &ts);
+//Task taskSendResult(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onSendResult, &ts);
+Task taskSendResult(TASK_IMMEDIATE, TASK_ONCE, &onSendResult, &ts);
+
+void onShowTemperature()
+{
+	_I_PMP("Sensor ");  _I_PP("[");  printOneWireAddress(topThermometer); _I_PP("] temp TOP: "); _I_PL(topTemperature);
+	_I_PMP("Sensor ");  _I_PP("[");  printOneWireAddress(caseThermometer); _I_PP("] temp CASE: "); _I_PL(caseTemperature);
+	taskSendResult.restart();
+}
+//Task taskShowTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onShowTemperature, &ts);
+Task taskShowTempereature(TASK_IMMEDIATE, TASK_ONCE, &onShowTemperature, &ts);
+
+void onGetTempereature()
+{
+	_I_PML("Getting temperatures... ");
+	topTemperature = sensors.getTempC(topThermometer);
+	caseTemperature = sensors.getTempC(caseThermometer);
+	taskShowTempereature.restart();
+	_I_PML("DONE");
+}
+Task taskGetTempereature(TASK_IMMEDIATE, TASK_ONCE, &onGetTempereature, &ts);
+
+
+void onPrepareTemperature()
+{
+	_I_PL();  _I_PML("Requesting temperatures... ");
+	sensors.requestTemperatures();
+	taskGetTempereature.restartDelayed(1 * TASK_SECOND);
+	_I_PML("DONE");
+}
+Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onPrepareTemperature, &ts);
 
 void onOutputResult()
 {
@@ -274,8 +280,12 @@ void setup()
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE
 
-	taskGetTempereature.enable();
-	taskSendResult.enable();
+	sensors.setResolution(topThermometer, TEMPERATURE_PRECISION);
+	sensors.setResolution(caseThermometer, TEMPERATURE_PRECISION);
+	sensors.setWaitForConversion(false);
+	taskPrepareTempereature.enableDelayed();
+	//taskShowTempereature.enable();
+	//taskSendResult.enable();
 }
 
 void loop()
