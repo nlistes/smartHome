@@ -1,3 +1,8 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#include <Bounce2.h>
+
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
 
@@ -12,16 +17,13 @@
 #include <TaskScheduler.h>
 #include <PubSubClient.h>
 
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
 //#include <stdlib.h>
 //#include <stdio.h>
 
 // ==== Debug options ==================
 #define _DEBUG_SYSTEM_
 #define _DEBUG_INTERNAL_
-#define _DEBUG_EXTERNAL_
+//#define _DEBUG_EXTERNAL_
 
 //===== Debug level SYSTEM ========================
 #ifdef _DEBUG_SYSTEM_
@@ -73,7 +75,7 @@
 
 // ==== Test options ==================
 #define _TEST_
-//#define _MQTT_TEST_
+#define _MQTT_TEST_
 #define _WIFI_TEST_
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -120,7 +122,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 #define MQTT_SERVER "10.20.30.60"
 #define MQTT_CLIENT_NAME "espTask_test"
 #else
-#define MQTT_SERVER "10.20.30.81"
+#define MQTT_SERVER "10.20.30.71"
 #define MQTT_CLIENT_NAME "espTask-"
 #endif // _MQTT_TEST_
 
@@ -142,7 +144,7 @@ void onConnectMQTT()
 		if (mqttClient.connect(mqttClientId.c_str()))
 		{
 			_S_PL("MQTT CONNECTED!");
-			//mqttClient.subscribe("inTopic");
+			mqttClient.subscribe("boiler/+");
 		}
 		else
 		{
@@ -169,12 +171,12 @@ Task taskRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &onRunMQTT, &ts);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature temperatureSensors(&oneWire);
 
-#define TEMPERATURE_PRECISION 12
+#define TEMPERATURE_PRECISION 10
 #define TEMPERATURE_READ_PERIOD 15
 
 
-#define MAX_TEMPERATURE_SENSORS 6
-#define ACTUAL_TEMPERATURE_SENSORS 2
+#define MAX_TEMPERATURE_SENSORS 5
+#define ACTUAL_TEMPERATURE_SENSORS 0
 
 struct Thermometer
 {
@@ -185,24 +187,12 @@ struct Thermometer
 
 Thermometer boilerThermometers[MAX_TEMPERATURE_SENSORS] =
 {
-	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "boiler_top", 0},
-	{{ 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C }, "boiler_bottom", 0},
+	{{ 0x28, 0x50, 0xCE, 0x66, 0x04, 0x00, 0x00, 0xB7 }, "boiler_top", 0}, // 0
+	{{ 0x28, 0xFC, 0xCE, 0x66, 0x04, 0x00, 0x00, 0x96 }, "boiler_bottom", 0}, // 3
 	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "heat_direct", 0},
 	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "heat_return", 0},
 	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "water", 0}
 };
-
-//DeviceAddress idThermometer[MAX_TEMPERATURE_SENSORS] =
-//{
-//	{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, //  1 Boiler
-//	{ 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C }, //  8
-//	{ 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA },  // 12
-//	{ 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA }, // 12 Heat
-//	{ 0x28, 0x13, 0x44, 0x67, 0x04, 0x00, 0x00, 0x62 },  // 14
-//	{ 0x28, 0x13, 0x44, 0x67, 0x04, 0x00, 0x00, 0x62 }  // 14 Water
-//
-//};
-//volatile float Temperature[MAX_TEMPERATURE_SENSORS];
 
 
 void onSendTemperature()
@@ -215,8 +205,8 @@ void onSendTemperature()
 			{
 				snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", boilerThermometers[i].value);
 				snprintf(topic, TOPIC_BUFFER_SIZE, "%s/boiler/temp/%u", MQTT_CLIENT_NAME, i);
-			//	mqttClient.publish(topic, msg);
-			//	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+				//	mqttClient.publish(topic, msg);
+				//	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 			}
 	}
 }
@@ -248,8 +238,89 @@ void onPrepareTemperature()
 	temperatureSensors.requestTemperatures();
 	taskGetTempereature.restartDelayed(750 * TASK_MILLISECOND);
 }
-Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onPrepareTemperature, &ts);
+Task taskPrepareTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onPrepareTemperature, &ts);
 
+#define VALVE_PIN 17
+#define SWITCH_PIN 16
+
+Bounce boilerForceSwitch = Bounce(SWITCH_PIN, 5);
+
+void onBoilerForceSwitch()
+{
+	boilerForceSwitch.update();
+}
+Task taskBoilerForceSwitch(TASK_IMMEDIATE, TASK_FOREVER, &onBoilerForceSwitch, &ts);
+
+bool heatRequired, heatRequiredPrev;
+bool heatRequiredChanged, heatRequiredChangedBySwitch, heatRequiredChangedByMQTT;
+
+void onCheckHeatRequiredStatus()
+{
+	heatRequiredChanged = heatRequiredChangedBySwitch || heatRequiredChangedByMQTT;
+	heatRequiredChangedByMQTT = false;
+}
+Task taskCheckHeatRequiredStatus(TASK_IMMEDIATE, TASK_FOREVER, &onCheckHeatRequiredStatus, &ts);
+
+
+void onReadSwitch()
+{
+	heatRequiredChangedBySwitch = boilerForceSwitch.rose();
+	heatRequired = heatRequiredChangedBySwitch ? !heatRequired : heatRequired;
+}
+Task taskReadSwitch(TASK_IMMEDIATE, TASK_FOREVER, &onReadSwitch, &ts);
+
+void onRunValve()
+{
+	digitalWrite(VALVE_PIN, heatRequired);
+}
+Task taskRunValve(TASK_IMMEDIATE, TASK_FOREVER, &onRunValve, &ts);
+
+void onShowValveStatus()
+{
+	if (heatRequiredChanged)
+	{
+		_I_PMP("heatRequired: "); _I_PL(heatRequired);
+	}
+}
+Task taskShowValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onShowValveStatus, &ts);
+
+void sendValveStatus()
+{
+	snprintf(msg, MSG_BUFFER_SIZE, "%u", heatRequired);
+	snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/status/heatRequired");
+	mqttClient.publish(topic, msg);
+	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+}
+
+void onSendValveStatus()
+{
+	if (heatRequiredChanged)
+	{
+		sendValveStatus();
+	}
+}
+Task taskSendValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onSendValveStatus, &ts);
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
+{
+	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
+	for (int i = 0; i < length; i++)
+	{
+		_I_PP((char)payload[i]);
+	}
+	_I_PL();
+
+	if (strcmp(topic, "boiler/heatRequired") == 0)
+	{
+		heatRequiredChangedByMQTT = heatRequired != (char)payload[0];
+		heatRequired = (char)payload[0] == '1';
+	}
+
+	if (strcmp(topic, "boiler/askStatus") == 0)
+	{
+		sendValveStatus();
+	}
+}
 
 
 void setup()
@@ -275,7 +346,7 @@ void setup()
 
 	mqttClientId = mqttClientId + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
-	//mqttClient.setCallback(mqtt_callback);
+	mqttClient.setCallback(mqtt_callback);
 	//tConnectMQTT.enable();
 	taskRunMQTT.enable();
 	// !!! Do not make changes! Update from espTask.ino
@@ -288,8 +359,15 @@ void setup()
 
 
 	temperatureSensors.setWaitForConversion(false);
-	taskPrepareTempereature.enableDelayed();
-
+	//taskPrepareTempereature.enableDelayed();
+	pinMode(SWITCH_PIN, INPUT);
+	pinMode(VALVE_PIN, OUTPUT);
+	taskBoilerForceSwitch.enableDelayed();
+	taskReadSwitch.enableDelayed();
+	taskRunValve.enableDelayed();
+	taskShowValveStatus.enableDelayed();
+	taskSendValveStatus.enableDelayed();
+	taskCheckHeatRequiredStatus.enableDelayed();
 }
 
 void loop()

@@ -480,10 +480,12 @@ DeviceAddress outThermometer[MAX_TEMPERATURE_SENSORS] =
 	{ 0x28, 0xE2, 0xE1, 0x66, 0x04, 0x00, 0x00, 0x49 }, // outBoiler 1 =  6
 	{ 0x28, 0x02, 0xD6, 0x66, 0x04, 0x00, 0x00, 0xB5 }, // outFloor  2 =  4
 	{ 0x28, 0xA7, 0xE7, 0x66, 0x04, 0x00, 0x00, 0x4B }, // out2.st   3 = 16
-	{ 0x28, 0xFA, 0xA7, 0x97, 0x04, 0x00, 0x00, 0x38 }  // outMain2  4 =  9
+	//{ 0x28, 0xFA, 0xA7, 0x97, 0x04, 0x00, 0x00, 0x38 }  // outMain2  4 =  9
+	{ 0x28, 0xDF, 0xA4, 0xEB, 0x03, 0x00, 0x00, 0xEB }  // outMain2  4 =  19
 };
 
 volatile float tempIn[MAX_TEMPERATURE_SENSORS], tempOut[MAX_TEMPERATURE_SENSORS], tempDiff[MAX_TEMPERATURE_SENSORS];
+volatile float tempOutDiff;
 
 #define TEMPERATURE_PRECISION 12
 #define TEMPERATURE_READ_PERIOD 15
@@ -498,6 +500,7 @@ void onGetTempereature()
 		tempOut[i] = sensors.getTempC(outThermometer[i]);
 		tempDiff[i] = tempIn[i] - tempOut[i];
 	}
+	tempOutDiff = tempOut[0] - tempOut[4];
 	_I_PML("DONE");
 }
 Task taskGetTempereature(TASK_IMMEDIATE, TASK_ONCE, &onGetTempereature, &ts);
@@ -519,6 +522,7 @@ void OnShowTemperature()
 		_I_PMP("Sensor ");  _I_PP("[");  printOneWireAddress(outThermometer[i]); _I_PP("] temp OUT: "); _I_PL(tempOut[i]);
 		_I_PMP("Temperature difference: "); _I_PL(tempDiff[i]);
 	}
+	_I_PMP("OUT difference: "); _I_PL(tempOutDiff);
 }
 Task taskShowTempereature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &OnShowTemperature, &ts);
 
@@ -539,11 +543,18 @@ void OnSendTemperature()
 			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%u/temp/out", MQTT_CLIENT_NAME, i);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+
 			snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempDiff[i]);
 			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%u/temp/diff", MQTT_CLIENT_NAME, i);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 		}
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", tempOutDiff);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%u/temp/diff", MQTT_CLIENT_NAME, 9);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+
 	}
 }
 Task taskSendTemperature(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &OnSendTemperature, &ts);
