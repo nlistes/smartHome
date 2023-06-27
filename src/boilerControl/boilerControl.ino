@@ -98,8 +98,8 @@
 
 // ==== Test options ==================
 #define _TEST_
-//#define _MQTT_TEST_
-#define _WIFI_TEST_
+#define _MQTT_TEST_
+//#define _WIFI_TEST_
 
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
@@ -147,7 +147,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-#define MQTT_SERVER "10.20.30.60"
+#define MQTT_SERVER "10.20.30.71"
 #define MQTT_CLIENT_NAME "espTest-"
 #else
 #define MQTT_SERVER "10.20.30.81"
@@ -224,15 +224,15 @@ struct Thermometer
 };
 
 #define MAX_TEMPERATURE_SENSORS 5
-#define ACTUAL_TEMPERATURE_SENSORS 3
+#define ACTUAL_TEMPERATURE_SENSORS 1
 
 Thermometer boilerThermometers[MAX_TEMPERATURE_SENSORS] =
 {
 	{{ 0x28, 0xDA, 0x4A, 0x9C, 0x04, 0x00, 0x00, 0x2C }, "water", 0}, // 8
 	{{ 0x28, 0x13, 0x44, 0x67, 0x04, 0x00, 0x00, 0x62 }, "boiler_top", 0}, // 14
-	{{ 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA }, "boiler_bottom", 0}, // 12
-	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "heat_direct", 0},
-	{{ 0x28, 0x88, 0xDC, 0x66, 0x04, 0x00, 0x00, 0x2D }, "heat_return", 0}
+	{{ 0x28, 0x95, 0xC3, 0xBD, 0x04, 0x00, 0x00, 0xBA }, "boiler_case", 0}, // 12
+	{{ 0x28, 0x25, 0xDB, 0x66, 0x04, 0x00, 0x00, 0x6A }, "heat_direct", 0}, // 11
+	{{ 0x28, 0xE2, 0xE1, 0x66, 0x04, 0x00, 0x00, 0x49 }, "heat_return", 0}  // 6
 };
 
 
@@ -251,11 +251,13 @@ Task taskSendTemperature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &on
 
 
 // ### FLOW START ###
-#define FLOW_COUNTER_READ_PERIOD 20
+#define FLOW_COUNTER_READ_PERIOD 5
 #define FLOW_COUNTER_DEBOUNCE_TIME  10 //20
 
 #define MAX_FLOW_COUNTERS 2
 #define ACTUAL_FLOW_COUNTERS 2
+
+#define BOILER_OFF_FLOW_THRESHOLD 50
 
 //#define USE_FLOW_STRUCT
 
@@ -318,9 +320,11 @@ Task taskSendFlow(FLOW_COUNTER_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onSendFl
 // ### VALVE START ###
 #define VALVE_PIN 17
 #define SWITCH_PIN 16
+#define LOCAL_STATUS_PIN 21
+#define REMOTE_STATUS_PIN 22
 
 bool heatRequired, heatRequiredPrev;
-bool heatRequiredChanged, heatRequiredChangedBySwitch, heatRequiredChangedByMQTT;
+bool heatRequiredChanged, heatRequiredChangedBySwitch, heatRequiredChangedByMQTT, heatRequiredChangedByFlow;
 
 Bounce boilerForceSwitch = Bounce(SWITCH_PIN, 5);
 
@@ -342,29 +346,10 @@ Task taskShowValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onShowValveStatus, &ts);
 void sendValveStatus();
 void onSendValveStatus();
 Task taskSendValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onSendValveStatus, &ts);
+
+void onCheckFlowThreshold();
+Task taskCheckFlowThreshold(FLOW_COUNTER_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onCheckFlowThreshold, &ts);
 // ### VALVE END ###
-
-
-void mqtt_callback(char* topic, byte* payload, unsigned int length)
-{
-	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
-	for (int i = 0; i < length; i++)
-	{
-		_I_PP((char)payload[i]);
-	}
-	_I_PL();
-
-	if (strcmp(topic, "boiler/heatRequired") == 0)
-	{
-		heatRequiredChangedByMQTT = heatRequired != (char)payload[0];
-		heatRequired = (char)payload[0] == '1';
-	}
-
-	if (strcmp(topic, "boiler/askStatus") == 0)
-	{
-		sendValveStatus();
-	}
-}
 
 
 void setup()
@@ -480,18 +465,18 @@ void setup()
 
 	taskFlowCorrection.enableDelayed();
 	taskShowFlow.enableDelayed();
-	//tSendFlow.enableDelayed();
+	taskSendFlow.enableDelayed();
 
 	pinMode(SWITCH_PIN, INPUT);
 	pinMode(VALVE_PIN, OUTPUT);
+	pinMode(LOCAL_STATUS_PIN, OUTPUT);
+	pinMode(REMOTE_STATUS_PIN, OUTPUT);
 	taskBoilerForceSwitch.enableDelayed();
 	taskReadSwitch.enableDelayed();
 	taskRunValve.enableDelayed();
 	taskShowValveStatus.enableDelayed();
 	taskSendValveStatus.enableDelayed();
 	taskCheckHeatRequiredStatus.enableDelayed();
-
-
 }
 
 void loop()
@@ -499,269 +484,24 @@ void loop()
 	ts.execute();
 }
 
-// ### TEMPERATURE START PROCEDURES ###
 
-void onPrepareTemperature()
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
 {
-	_I_PL();  _I_PML("Requesting temperatures... ");
-	temperatureSensors.requestTemperatures();
-	taskGetTempereature.restartDelayed(750 * TASK_MILLISECOND);
-}
-
-void onGetTempereature()
-{
-	_I_PML("Geting temperatures... ");
-
-	for (int i = 0; i < ACTUAL_TEMPERATURE_SENSORS; i++)
+	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
+	for (int i = 0; i < length; i++)
 	{
-		boilerThermometers[i].value = temperatureSensors.getTempC(boilerThermometers[i].id);
+		_I_PP((char)payload[i]);
 	}
-}
+	_I_PL();
 
-void onShowTemperature()
-{
-	for (int i = 0; i < ACTUAL_TEMPERATURE_SENSORS; i++)
+	if (strcmp(topic, "boiler/heatRequired") == 0)
 	{
-		_I_PMP("Temperature [");  _I_PP(boilerThermometers[i].name); _I_PP("] = "); _I_PL(boilerThermometers[i].value);
+		heatRequiredChangedByMQTT = heatRequired != (char)payload[0];
+		heatRequired = (char)payload[0] == '1';
 	}
-}
 
-void onSendTemperature()
-{
-	onConnectMQTT();
-	if (mqttClient.connected())
-	{
-		for (uint8_t i = 0; i < ACTUAL_TEMPERATURE_SENSORS; i++)
-			if (boilerThermometers[i].value > 0)
-			{
-				snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", boilerThermometers[i].value);
-				snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/temp/%s", boilerThermometers[i].name);
-				mqttClient.publish(topic, msg);
-				_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
-			}
-	}
-}
-// ### TEMPERATURE END PROCEDURES ###
-
-
-// ### FLOW START PROCEDURES ###
-
-void IRAM_ATTR pressButtonISR_0()
-{
-	int8_t btnOnISR = 0;
-#ifdef USE_FLOW_STRUCT
-	pressTime[btnOnISR] = millis();
-	detachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin));
-#else
-	btnPressedTime[btnOnISR] = millis();
-	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
-#endif // USE_FLOW_STRUCT
-	taskButtonPressed_0.restartDelayed(FLOW_COUNTER_DEBOUNCE_TIME);
-}
-
-void IRAM_ATTR pressButtonISR_1()
-{
-	int8_t btnOnISR = 1;
-#ifdef USE_FLOW_STRUCT
-	pressTime[btnOnISR] = millis();
-	detachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin));
-#else
-	btnPressedTime[btnOnISR] = millis();
-	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
-#endif
-	taskButtonPressed_1.restartDelayed(FLOW_COUNTER_DEBOUNCE_TIME);
-}
-
-void IRAM_ATTR releaseButtonISR_0()
-{
-	int8_t btnOnISR = 0;
-#ifdef USE_FLOW_STRUCT
-	detachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin));
-#else
-	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
-#endif
-	taskButtonReleased_0.restartDelayed(FLOW_COUNTER_DEBOUNCE_TIME);
-}
-
-void IRAM_ATTR releaseButtonISR_1()
-{
-	int8_t btnOnISR = 1;
-#ifdef USE_FLOW_STRUCT
-	detachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin));
-#else
-	detachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]));
-#endif
-	taskButtonReleased_1.restartDelayed(FLOW_COUNTER_DEBOUNCE_TIME);
-}
-
-void onButtonPressed_0()
-{
-	int8_t btnOnISR = 0;
-	_I_PL();
-	_I_PML("OnButtonPressed_0");
-#ifdef USE_FLOW_STRUCT
-	attachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin), &releaseButtonISR_0, FALLING);
-	boilerFlowCounters[btnOnISR].value++;
-	boilerFlowCounters[btnOnISR].durationBetweenPress = pressTime[btnOnISR] - boilerFlowCounters[btnOnISR].previousPressTime;
-	boilerFlowCounters[btnOnISR].flow = (60 * 60 * 1000) / (boilerFlowCounters[btnOnISR].durationBetweenPress);
-	boilerFlowCounters[btnOnISR].previousPressTime = pressTime[btnOnISR];
-	_I_PMP(boilerFlowCounters[btnOnISR].value); _I_PP(": "); _I_PP(boilerFlowCounters[btnOnISR].durationBetweenPress); _I_PP(": "); _I_PL(boilerFlowCounters[btnOnISR].flow);
-#else
-	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &releaseButtonISR_0, FALLING);
-	flowMeterValue[btnOnISR]++;
-	btnDurationBetweenPresses[btnOnISR] = btnPressedTime[btnOnISR] - btnPreviousPressedTime[btnOnISR];
-	flowSpeed[btnOnISR] = (60 * 60 * 1000) / (btnDurationBetweenPresses[btnOnISR]);
-	btnPreviousPressedTime[btnOnISR] = btnPressedTime[btnOnISR];
-	_I_PMP(flowMeterValue[btnOnISR]); _I_PP(": "); _I_PP(btnDurationBetweenPresses[btnOnISR]); _I_PP(": "); _I_PL(flowSpeed[btnOnISR]);
-#endif
-}
-
-void onButtonPressed_1()
-{
-	int8_t btnOnISR = 1;
-	_I_PL();
-	_I_PML("OnButtonPressed_1");
-#ifdef USE_FLOW_STRUCT
-	attachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin), &releaseButtonISR_0, FALLING);
-	boilerFlowCounters[btnOnISR].value++;
-	boilerFlowCounters[btnOnISR].durationBetweenPress = pressTime[btnOnISR] - boilerFlowCounters[btnOnISR].previousPressTime;
-	boilerFlowCounters[btnOnISR].flow = (60 * 60 * 1000) / (boilerFlowCounters[btnOnISR].durationBetweenPress);
-	boilerFlowCounters[btnOnISR].previousPressTime = pressTime[btnOnISR];
-	_I_PMP(boilerFlowCounters[btnOnISR].value); _I_PP(": "); _I_PP(boilerFlowCounters[btnOnISR].durationBetweenPress); _I_PP(": "); _I_PL(boilerFlowCounters[btnOnISR].flow);
-#else
-	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &releaseButtonISR_1, FALLING);
-	flowMeterValue[btnOnISR]++;
-	btnDurationBetweenPresses[btnOnISR] = btnPressedTime[btnOnISR] - btnPreviousPressedTime[btnOnISR];
-	flowSpeed[btnOnISR] = (60 * 60 * 1000) / (btnDurationBetweenPresses[btnOnISR]);
-	btnPreviousPressedTime[btnOnISR] = btnPressedTime[btnOnISR];
-	_I_PMP(flowMeterValue[btnOnISR]); _I_PP(": "); _I_PP(btnDurationBetweenPresses[btnOnISR]); _I_PP(": "); _I_PL(flowSpeed[btnOnISR]);
-#endif
-}
-
-void onButtonReleased_0()
-{
-	int8_t btnOnISR = 0;
-	_I_PL();
-	_I_PML("OnButtonReleased_0");
-#ifdef USE_FLOW_STRUCT
-	attachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin), &pressButtonISR_0, RISING);
-#else
-	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &pressButtonISR_0, RISING);
-#endif
-}
-
-void onButtonReleased_1()
-{
-	int8_t btnOnISR = 1;
-	_I_PL();
-	_I_PML("OnButtonReleased_1");
-#ifdef USE_FLOW_STRUCT
-	attachInterrupt(digitalPinToInterrupt(boilerFlowCounters[btnOnISR].pin), &pressButtonISR_1, RISING);
-#else
-	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &pressButtonISR_1, RISING);
-#endif
-}
-
-void onFlowCorrection()
-{
-	for (int i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
-#ifdef USE_FLOW_STRUCT
-		if ((millis() - boilerFlowCounters[i].previousPressTime) > boilerFlowCounters[i].durationBetweenPress & boilerFlowCounters[i].previousPressTime != 0)
-		{
-			boilerFlowCounters[i].flow = (60 * 60 * 1000) / (millis() - boilerFlowCounters[i].previousPressTime);
-		}
-#else
-		if ((millis() - btnPreviousPressedTime[i]) > btnDurationBetweenPresses[i] & btnPreviousPressedTime[i] != 0)
-		{
-			flowSpeed[i] = (60 * 60 * 1000) / (millis() - btnPreviousPressedTime[i]);
-		}
-#endif
-}
-
-void onShowFlow()
-{
-	_I_PL();
-	for (int i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
-	{
-#ifdef USE_FLOW_STRUCT
-		_I_PMP("flowMeter"); _I_PP("["); _I_PP(boilerFlowCounters[i].name); _I_PP("] flow: "); _I_PP(boilerFlowCounters[i].flow); _I_PP(" value: "); _I_PL(boilerFlowCounters[i].value);
-#else
-		_I_PMP("flowMeter"); _I_PP("["); _I_PP(flowCounterName[i]); _I_PP("] flow: "); _I_PP(flowSpeed[i]); _I_PP(" value: "); _I_PL(flowMeterValue[i]);
-#endif
-	}
-}
-
-void onSendFlow()
-{
-	//if (mqttClient.connected())
-	//{
-	//	_E_PL();
-	//	for (uint8_t i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
-	//	{
-	//		snprintf(msg, MSG_BUFFER_SIZE, "%d", flowSpeed[i]);
-	//		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%u/flow", MQTT_CLIENT_NAME, i);
-	//		//itoa(btnDurationBetweenPresses[btnOnISR], msg, 10);
-	//		mqttClient.publish(topic, msg);
-	//		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
-
-
-	//		snprintf(msg, MSG_BUFFER_SIZE, "%d", flowMeterValue[i]);
-	//		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%u/value", MQTT_CLIENT_NAME, i);
-	//		mqttClient.publish(topic, msg);
-	//		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
-
-	//		flowSpeedSummary = flowSpeedSummary + flowSpeed[i];
-	//		flowMeterValueSummary = flowMeterValueSummary + flowMeterValue[i];
-	//	}
-	//}
-}
-// ### FLOW END PROCEDURES ###
-
-// ### VALVE START PROCEDURES###
-
-void onBoilerForceSwitch()
-{
-	boilerForceSwitch.update();
-}
-
-void onReadSwitch()
-{
-	heatRequiredChangedBySwitch = boilerForceSwitch.rose();
-	heatRequired = heatRequiredChangedBySwitch ? !heatRequired : heatRequired;
-}
-
-void onCheckHeatRequiredStatus()
-{
-	heatRequiredChanged = heatRequiredChangedBySwitch || heatRequiredChangedByMQTT;
-	heatRequiredChangedByMQTT = false;
-}
-
-void onRunValve()
-{
-	digitalWrite(VALVE_PIN, heatRequired);
-}
-
-void onShowValveStatus()
-{
-	if (heatRequiredChanged)
-	{
-		_I_PMP("heatRequired: "); _I_PL(heatRequired);
-	}
-}
-
-void sendValveStatus()
-{
-	snprintf(msg, MSG_BUFFER_SIZE, "%u", heatRequired);
-	snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/status/heatRequired");
-	mqttClient.publish(topic, msg);
-	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
-}
-
-void onSendValveStatus()
-{
-	if (heatRequiredChanged)
+	if (strcmp(topic, "boiler/askStatus") == 0)
 	{
 		sendValveStatus();
 	}
 }
-// ### VALVE START PROCEDURES###

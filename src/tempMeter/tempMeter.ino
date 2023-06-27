@@ -117,7 +117,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-#define MQTT_SERVER "10.20.30.60"
+#define MQTT_SERVER "10.20.30.71"
 #define MQTT_CLIENT_NAME "espTask_test-"
 #else
 #define MQTT_SERVER "10.20.30.81"

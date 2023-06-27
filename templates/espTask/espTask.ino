@@ -142,7 +142,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-	#define MQTT_SERVER "10.20.30.60"
+	#define MQTT_SERVER "10.20.30.71"
 	#define MQTT_CLIENT_NAME "espTest-"
 #else
 	#define MQTT_SERVER "10.20.30.81"
@@ -150,7 +150,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
-#define MQTT_IN_TOPIC ""
+#define MQTT_IN_TOPIC "$SYS/broker/version"
 #endif // !MQTT_IN_TOPIC
 
 
@@ -198,7 +198,7 @@ Task taskHandleOTA(TASK_IMMEDIATE, TASK_FOREVER, &onHandleOTA, &ts);
 // END TEMPLATE
 
 #ifdef _TEST_
-#define DATA_SEND_INTERVAL	60
+#define DATA_SEND_INTERVAL	10
 uint16_t test_value = 0;
 
 void onGetTestValue()
@@ -248,7 +248,7 @@ void setup()
 
 	mqttClientId = mqttClientId + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
-	//mqttClient.setCallback(mqtt_callback);
+	mqttClient.setCallback(mqtt_callback);
 
 	ArduinoOTA.setHostname(HOSTNAME);
 
@@ -312,4 +312,14 @@ void setup()
 void loop()
 {
 	ts.execute();
+}
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
+{
+	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
+	for (int i = 0; i < length; i++)
+	{
+		_I_PP((char)payload[i]);
+	}
+	_I_PL();
 }
