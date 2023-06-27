@@ -1,3 +1,9 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define HOSTNAME "ESP32-tempMeter"
+
+
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
 
@@ -7,21 +13,38 @@
 
 #if defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #endif
 
 #include <TaskScheduler.h>
 #include <PubSubClient.h>
 
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
 //#include <stdlib.h>
 //#include <stdio.h>
 
 // ==== Debug options ==================
+#define _DEBUG_
 #define _DEBUG_SYSTEM_
 #define _DEBUG_INTERNAL_
 #define _DEBUG_EXTERNAL_
+
+//===== Debugging macros ========================
+#ifdef _DEBUG_
+#define SerialD Serial
+#define _PP(a) SerialD.print(a)
+#define _PL(a) SerialD.println(a)
+#define _PH(a) SerialD.print(a, HEX)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
+#else
+#define _PP(a)
+#define _PL(a)
+#define _PH(a)
+#define _PMP(a)
+#define _PML(a)
+#endif
 
 //===== Debug level SYSTEM ========================
 #ifdef _DEBUG_SYSTEM_
@@ -76,6 +99,11 @@
 #define _MQTT_TEST_
 //#define _WIFI_TEST_
 
+#ifndef HOSTNAME
+#define HOSTNAME "ESP32-TASK"
+#endif // !HOSTNAME
+
+
 #if defined(ARDUINO_ARCH_ESP8266)
 #define COM_SPEED 74880
 WiFiClient ethClient;
@@ -87,7 +115,7 @@ WiFiClient ethClient;
 #endif
 
 #ifdef _WIFI_TEST_
-#define PRIMARY_SSID "PAGRABS2"
+#define PRIMARY_SSID "OSIS"
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #else
 #define PRIMARY_SSID "PAGRABS"
@@ -118,11 +146,16 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.71"
-#define MQTT_CLIENT_NAME "espTask_test-"
+#define MQTT_CLIENT_NAME "espTest-"
 #else
 #define MQTT_SERVER "10.20.30.81"
 #define MQTT_CLIENT_NAME "espTask-"
 #endif // _MQTT_TEST_
+
+#ifndef MQTT_IN_TOPIC
+#define MQTT_IN_TOPIC "$SYS/broker/version"
+#endif // !MQTT_IN_TOPIC
+
 
 PubSubClient mqttClient(ethClient);
 
@@ -142,7 +175,7 @@ void onConnectMQTT()
 		if (mqttClient.connect(mqttClientId.c_str()))
 		{
 			_S_PL("MQTT CONNECTED!");
-			//mqttClient.subscribe("inTopic");
+			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
 		{
@@ -157,6 +190,13 @@ void onRunMQTT()
 	mqttClient.loop();
 }
 Task taskRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &onRunMQTT, &ts);
+
+void onHandleOTA()
+{
+	ArduinoOTA.handle();
+}
+Task taskHandleOTA(TASK_IMMEDIATE, TASK_FOREVER, &onHandleOTA, &ts);
+
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE
 
@@ -253,8 +293,8 @@ Task taskOutputResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onOu
 
 void setup()
 {
-// BEGIN TEMPLATE
-// !!! Do not make changes! Update from espTask.ino
+	// BEGIN TEMPLATE
+	// !!! Do not make changes! Update from espTask.ino
 	Serial.begin(COM_SPEED);
 	delay(100);
 	randomSeed(analogRead(0));
@@ -267,6 +307,7 @@ void setup()
 	WiFi.onEvent(onWiFiDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
 	WiFi.mode(WIFI_STA);
+	WiFi.setHostname(HOSTNAME);
 	WiFi.begin(PRIMARY_SSID, PRIMARY_PASS);
 	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
 	WiFi.setAutoReconnect(true);
@@ -274,11 +315,60 @@ void setup()
 
 	mqttClientId = mqttClientId + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
-	//mqttClient.setCallback(mqtt_callback);
+	mqttClient.setCallback(mqtt_callback);
+
+	ArduinoOTA.setHostname(HOSTNAME);
+
+	ArduinoOTA.onStart
+	(
+		[]()
+		{
+			String type;
+			if (ArduinoOTA.getCommand() == U_FLASH)
+				type = "sketch";
+			else // U_SPIFFS
+				type = "filesystem";
+			// NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+			Serial.println("Start updating " + type);
+		}
+	);
+
+	ArduinoOTA.onEnd
+	(
+		[]()
+		{
+			Serial.println("\nEnd");
+		}
+	);
+
+	ArduinoOTA.onProgress
+	(
+		[](unsigned int progress, unsigned int total)
+		{
+			Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+		}
+	);
+
+	ArduinoOTA.onError
+	(
+		[](ota_error_t error)
+		{
+			Serial.printf("Error[%u]: ", error);
+			if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+			else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+			else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+			else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+			else if (error == OTA_END_ERROR) Serial.println("End Failed");
+		}
+	);
+
+	ArduinoOTA.begin();
+
 	//tConnectMQTT.enable();
 	taskRunMQTT.enable();
-// !!! Do not make changes! Update from espTask.ino
-// END TEMPLATE
+	taskHandleOTA.enable();
+	// !!! Do not make changes! Update from espTask.ino
+	// END TEMPLATE
 
 	sensors.setResolution(topThermometer, TEMPERATURE_PRECISION);
 	sensors.setResolution(caseThermometer, TEMPERATURE_PRECISION);
@@ -291,4 +381,14 @@ void setup()
 void loop()
 {
 	ts.execute();
+}
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
+{
+	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
+	for (int i = 0; i < length; i++)
+	{
+		_I_PP((char)payload[i]);
+	}
+	_I_PL();
 }
