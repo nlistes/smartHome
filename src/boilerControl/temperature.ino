@@ -34,7 +34,7 @@ void onSendTemperature()
 			if (boilerThermometers[i].value > 0)
 			{
 				snprintf(msg, MSG_BUFFER_SIZE, "%2.2f", boilerThermometers[i].value);
-				snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/pagrabs/temp-%s", boilerThermometers[i].name);
+				snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-temp", DEVICE_TYPE, DEVICE_NAME, boilerThermometers[i].name);
 				mqttClient.publish(topic, msg);
 				_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 			}

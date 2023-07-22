@@ -153,14 +153,14 @@ void onSendFlow()
 		for (uint8_t i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
 		{
 			snprintf(msg, MSG_BUFFER_SIZE, "%d", flowSpeed[i]);
-			snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/pagrabs/flow-%s", flowCounterName[i]);
+			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-flow", DEVICE_TYPE, DEVICE_NAME, flowCounterName[i]);
 			//itoa(btnDurationBetweenPresses[btnOnISR], msg, 10);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 
 
 			snprintf(msg, MSG_BUFFER_SIZE, "%d", flowMeterValue[i]);
-			snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/pagrabs/value-%s", flowCounterName[i]);
+			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-value", DEVICE_TYPE, DEVICE_NAME, flowCounterName[i]);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 		}

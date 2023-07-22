@@ -4,6 +4,8 @@
 #include <Bounce2.h>
 
 #define HOSTNAME "ESP32-boilerControl"
+#define DEVICE_TYPE "Boiler"
+#define DEVICE_NAME "Pagrabs"
 #define MQTT_IN_TOPIC "boiler/+"
 
 // BEGIN TEMPLATE
@@ -99,11 +101,19 @@
 // ==== Test options ==================
 #define _TEST_
 #define _MQTT_TEST_
-//#define _WIFI_TEST_
+#define _WIFI_TEST_
 
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
+
+#ifndef DEVICE_TYPE
+#define DEVICE_TYPE "Unknown"
+#endif // !DEVICE_TYPE
+
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "Unknown"
+#endif // !DEVICE_TYPE
 
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -147,15 +157,15 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-#define MQTT_SERVER "10.20.30.71"
+#define MQTT_SERVER "10.20.30.70"
 #define MQTT_CLIENT_NAME "espTest-"
 #else
-#define MQTT_SERVER "10.20.30.81"
+#define MQTT_SERVER "10.20.30.80"
 #define MQTT_CLIENT_NAME "espTask-"
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
-#define MQTT_IN_TOPIC ""
+#define MQTT_IN_TOPIC "$SYS/broker/version"
 #endif // !MQTT_IN_TOPIC
 
 
