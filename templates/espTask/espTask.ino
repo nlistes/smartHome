@@ -100,6 +100,14 @@
 #define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
 
+#ifndef DEVICE_TYPE
+#define DEVICE_TYPE "Unknown"
+#endif // !DEVICE_TYPE
+
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "Unknown"
+#endif // !DEVICE_TYPE
+
 
 #if defined(ARDUINO_ARCH_ESP8266)
 	#define COM_SPEED 74880
@@ -142,10 +150,10 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-	#define MQTT_SERVER "10.20.30.71"
+	#define MQTT_SERVER "10.20.30.70"
 	#define MQTT_CLIENT_NAME "espTest-"
 #else
-	#define MQTT_SERVER "10.20.30.81"
+	#define MQTT_SERVER "10.20.30.80"
 	#define MQTT_CLIENT_NAME "espTask-"
 #endif // _MQTT_TEST_
 
@@ -214,7 +222,7 @@ void onSendTest()
 	if (mqttClient.connected())
 	{
 		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
-		snprintf(topic, TOPIC_BUFFER_SIZE, "test/test2");
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
 		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 	}
