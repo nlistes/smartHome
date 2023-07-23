@@ -6,7 +6,7 @@
 #define HOSTNAME "ESP32-boilerControl"
 #define DEVICE_TYPE "Boiler"
 #define DEVICE_NAME "Pagrabs"
-#define MQTT_IN_TOPIC "boiler/+"
+#define MQTT_IN_TOPIC "Boiler/#"
 
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
@@ -267,7 +267,7 @@ Task taskSendTemperature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &on
 #define MAX_FLOW_COUNTERS 2
 #define ACTUAL_FLOW_COUNTERS 2
 
-#define BOILER_OFF_FLOW_THRESHOLD 50
+#define BOILER_OFF_FLOW_THRESHOLD 70
 
 //#define USE_FLOW_STRUCT
 
@@ -328,6 +328,8 @@ Task taskSendFlow(FLOW_COUNTER_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onSendFl
 
 
 // ### VALVE START ###
+#define VALVE_STATUS_READ_PERIOD 120
+
 #define VALVE_PIN 17
 #define SWITCH_PIN 16
 #define LOCAL_STATUS_PIN 21
@@ -353,9 +355,8 @@ Task taskRunValve(TASK_IMMEDIATE, TASK_FOREVER, &onRunValve, &ts);
 void onShowValveStatus();
 Task taskShowValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onShowValveStatus, &ts);
 
-void sendValveStatus();
 void onSendValveStatus();
-Task taskSendValveStatus(TASK_IMMEDIATE, TASK_FOREVER, &onSendValveStatus, &ts);
+Task taskSendValveStatus(VALVE_STATUS_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onSendValveStatus, &ts);
 
 void onCheckFlowThreshold();
 Task taskCheckFlowThreshold(FLOW_COUNTER_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onCheckFlowThreshold, &ts);
@@ -504,14 +505,14 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
 	}
 	_I_PL();
 
-	if (strcmp(topic, "boiler/heatRequired") == 0)
+	if (strcmp(topic, "Boiler/Pagrabs/request-heatRequired") == 0)
 	{
 		heatRequiredChangedByMQTT = heatRequired != (char)payload[0];
 		heatRequired = (char)payload[0] == '1';
 	}
 
-	if (strcmp(topic, "boiler/askStatus") == 0)
+	if (strcmp(topic, "Boiler/Pagrabs/request-valveStatus") == 0)
 	{
-		sendValveStatus();
+		taskSendValveStatus.forceNextIteration();
 	}
 }

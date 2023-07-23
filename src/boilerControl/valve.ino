@@ -29,6 +29,11 @@ void onCheckHeatRequiredStatus()
 	{
 		taskCheckFlowThreshold.enableDelayed(TASK_MINUTE);
 	}
+	if (heatRequiredChanged)
+	{
+		taskSendValveStatus.forceNextIteration();
+	}
+
 	heatRequiredChangedByMQTT = false;
 	heatRequiredChangedByFlow = false;
 }
@@ -48,20 +53,12 @@ void onShowValveStatus()
 	}
 }
 
-void sendValveStatus()
-{
-	snprintf(msg, MSG_BUFFER_SIZE, "%u", heatRequired);
-	snprintf(topic, TOPIC_BUFFER_SIZE, "boiler/pagrabs/heatRequired");
-	mqttClient.publish(topic, msg);
-	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
-}
-
 void onSendValveStatus()
 {
-	if (heatRequiredChanged)
-	{
-		sendValveStatus();
-	}
+	snprintf(msg, MSG_BUFFER_SIZE, "%u", heatRequired);
+	snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/status-heatRequired", DEVICE_TYPE, DEVICE_NAME);
+	mqttClient.publish(topic, msg);
+	_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 }
 
 // ### VALVE START PROCEDURES###
