@@ -63,6 +63,7 @@ void onButtonPressed_0()
 #else
 	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &releaseButtonISR_0, FALLING);
 	flowMeterValue[btnOnISR]++;
+	flowMeterValueUsed[btnOnISR]++;
 	btnDurationBetweenPresses[btnOnISR] = btnPressedTime[btnOnISR] - btnPreviousPressedTime[btnOnISR];
 	flowSpeed[btnOnISR] = (60 * 60 * 1000) / (btnDurationBetweenPresses[btnOnISR]);
 	btnPreviousPressedTime[btnOnISR] = btnPressedTime[btnOnISR];
@@ -85,6 +86,7 @@ void onButtonPressed_1()
 #else
 	attachInterrupt(digitalPinToInterrupt(btnPins[btnOnISR]), &releaseButtonISR_1, FALLING);
 	flowMeterValue[btnOnISR]++;
+	flowMeterValueUsed[btnOnISR]++;
 	btnDurationBetweenPresses[btnOnISR] = btnPressedTime[btnOnISR] - btnPreviousPressedTime[btnOnISR];
 	flowSpeed[btnOnISR] = (60 * 60 * 1000) / (btnDurationBetweenPresses[btnOnISR]);
 	btnPreviousPressedTime[btnOnISR] = btnPressedTime[btnOnISR];
@@ -140,7 +142,7 @@ void onShowFlow()
 #ifdef USE_FLOW_STRUCT
 		_I_PMP("flowMeter"); _I_PP("["); _I_PP(boilerFlowCounters[i].name); _I_PP("] flow: "); _I_PP(boilerFlowCounters[i].flow); _I_PP(" value: "); _I_PL(boilerFlowCounters[i].value);
 #else
-		_I_PMP("flowMeter"); _I_PP("["); _I_PP(flowCounterName[i]); _I_PP("] flow: "); _I_PP(flowSpeed[i]); _I_PP(" value: "); _I_PL(flowMeterValue[i]);
+		_I_PMP("flowMeter"); _I_PP("["); _I_PP(flowMeterName[i]); _I_PP("] flow: "); _I_PP(flowSpeed[i]); _I_PP(" value: "); _I_PL(flowMeterValue[i]);
 #endif
 	}
 }
@@ -153,16 +155,21 @@ void onSendFlow()
 		for (uint8_t i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
 		{
 			snprintf(msg, MSG_BUFFER_SIZE, "%d", flowSpeed[i]);
-			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-flow", DEVICE_TYPE, DEVICE_NAME, flowCounterName[i]);
+			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-flow", DEVICE_TYPE, DEVICE_NAME, flowMeterName[i]);
 			//itoa(btnDurationBetweenPresses[btnOnISR], msg, 10);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 
-
 			snprintf(msg, MSG_BUFFER_SIZE, "%d", flowMeterValue[i]);
-			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-value", DEVICE_TYPE, DEVICE_NAME, flowCounterName[i]);
+			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-value", DEVICE_TYPE, DEVICE_NAME, flowMeterName[i]);
 			mqttClient.publish(topic, msg);
 			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+
+			snprintf(msg, MSG_BUFFER_SIZE, "%d", flowMeterValueUsed[i]);
+			snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/%s-used", DEVICE_TYPE, DEVICE_NAME, flowMeterName[i]);
+			mqttClient.publish(topic, msg);
+			_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+
 		}
 	}
 }

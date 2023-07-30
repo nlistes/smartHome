@@ -257,7 +257,7 @@ Task taskShowTempereature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &o
 
 void onSendTemperature();
 Task taskSendTemperature(TEMPERATURE_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onSendTemperature, &ts);
-// ### TEMPERATURE END DEFINITIONS###
+// ### TEMPERATURE END DEFINITIONS ###
 
 
 // ### FLOW START ###
@@ -298,7 +298,8 @@ uint8_t btnPins[MAX_FLOW_COUNTERS] = { 19, 23 };
 volatile uint32_t btnPressedTime[MAX_FLOW_COUNTERS];
 uint32_t btnPreviousPressedTime[MAX_FLOW_COUNTERS], btnDurationBetweenPresses[MAX_FLOW_COUNTERS];
 uint16_t flowMeterValue[MAX_FLOW_COUNTERS], flowSpeed[MAX_FLOW_COUNTERS];
-String flowCounterName[MAX_FLOW_COUNTERS] = {"heat", "water"};
+uint16_t flowMeterValueUsed[MAX_FLOW_COUNTERS];
+String flowMeterName[MAX_FLOW_COUNTERS] = {"heat", "water"};
 
 void IRAM_ATTR pressButtonISR_0();
 void IRAM_ATTR pressButtonISR_1();
@@ -328,7 +329,7 @@ Task taskSendFlow(FLOW_COUNTER_READ_PERIOD* TASK_SECOND, TASK_FOREVER, &onSendFl
 
 
 // ### VALVE START ###
-#define VALVE_STATUS_READ_PERIOD 120
+#define VALVE_STATUS_READ_PERIOD 20
 
 #define VALVE_PIN 17
 #define SWITCH_PIN 16
@@ -391,6 +392,7 @@ void setup()
 
 	ArduinoOTA.setHostname(HOSTNAME);
 
+	// ArduinoOTA EVENTS
 	ArduinoOTA.onStart
 	(
 		[]()

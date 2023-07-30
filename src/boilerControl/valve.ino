@@ -18,20 +18,29 @@ void onCheckFlowThreshold()
 	{
 		heatRequired = false;
 		taskCheckFlowThreshold.disable();
-		flowMeterValue[1] = 0;
 	}
 }
 
 void onCheckHeatRequiredStatus()
 {
 	heatRequiredChanged = heatRequiredChangedBySwitch || heatRequiredChangedByMQTT || heatRequiredChangedByFlow;
+
+	if (heatRequiredChanged)
+	{
+		taskSendValveStatus.forceNextIteration();
+	}
+
 	if (heatRequiredChanged && heatRequired)
 	{
 		taskCheckFlowThreshold.enableDelayed(TASK_MINUTE);
 	}
-	if (heatRequiredChanged)
+
+	if (heatRequiredChanged && (!heatRequired))
 	{
-		taskSendValveStatus.forceNextIteration();
+		for (uint8_t i = 0; i < ACTUAL_FLOW_COUNTERS; i++)
+		{
+			flowMeterValueUsed[i] = 0;
+		}
 	}
 
 	heatRequiredChangedByMQTT = false;
