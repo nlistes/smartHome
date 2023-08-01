@@ -94,7 +94,7 @@
 // ==== Test options ==================
 #define _TEST_
 #define _MQTT_TEST_
-#define _WIFI_TEST_
+//#define _WIFI_TEST_
 
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
@@ -202,17 +202,36 @@ void onHandleOTA()
 }
 Task taskHandleOTA(TASK_IMMEDIATE, TASK_FOREVER, &onHandleOTA, &ts);
 
+void onShowWiFiStatus()
+{
+	_I_PMP("RSSI [");  _I_PP(WiFi.SSID()); _I_PP("] = "); _I_PL(WiFi.RSSI());
+}
+Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
+
+void onSendWiFiStatus()
+{
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "%d", WiFi.RSSI());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/linkquality", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+	}
+}
+Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
+
+
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE
 
 #ifdef _TEST_
-#define DATA_SEND_INTERVAL	10
+#define DATA_SEND_INTERVAL	20
 uint16_t test_value = 0;
 
 void onGetTestValue()
 {
 	test_value++;
-	_I_PMP("Counter: "); _I_PL(test_value);
+	_I_PMP("Test counter: "); _I_PL(test_value);
 }
 Task taskGetTestValue(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestValue, &ts);
 
@@ -222,7 +241,7 @@ void onSendTest()
 	if (mqttClient.connected())
 	{
 		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
-		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s", DEVICE_TYPE, DEVICE_NAME);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/test_counter", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
 		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
 	}
@@ -306,14 +325,16 @@ void setup()
 	ArduinoOTA.begin();
 
 	//tConnectMQTT.enable();
-	taskRunMQTT.enable();
 	taskHandleOTA.enable();
+	taskRunMQTT.enable();
+	taskShowWiFiStatus.enableDelayed();
+	taskSendWiFiStatus.enableDelayed();
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE
 
 #ifdef _TEST_
-	taskGetTestValue.enable();
-	taskSendTest.enable();
+	taskGetTestValue.enableDelayed();
+	taskSendTest.enableDelayed();
 #endif // _TEST_
 }
 
