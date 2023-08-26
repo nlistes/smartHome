@@ -1,7 +1,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-// BEGIN TEMPLATE
+// BEGIN TEMPLATE (Version 1.25)
 // !!! Do not make changes! Update from espTask.ino
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -33,8 +33,8 @@
 #define _PP(a) SerialD.print(a)
 #define _PL(a) SerialD.println(a)
 #define _PH(a) SerialD.print(a, HEX)
-#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
-#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(F(": ")); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(F(": ")); SerialD.println(a)
 #else
 #define _PP(a)
 #define _PL(a)
@@ -49,8 +49,8 @@
 #define _S_PP(a) SerialS.print(a)
 #define _S_PL(a) SerialS.println(a)
 #define _S_PH(a) SerialS.print(a, HEX)
-#define _S_PMP(a) SerialS.print(millis()); SerialS.print(": "); SerialS.print(a)
-#define _S_PML(a) SerialS.print(millis()); SerialS.print(": "); SerialS.println(a)
+#define _S_PMP(a) SerialS.print(millis()); SerialS.print(F(": ")); SerialS.print(a)
+#define _S_PML(a) SerialS.print(millis()); SerialS.print(F(": ")); SerialS.println(a)
 #else
 #define _S_PP(a)
 #define _S_PL(a)
@@ -65,8 +65,8 @@
 #define _I_PP(a) SerialI.print(a)
 #define _I_PL(a) SerialI.println(a)
 #define _I_PH(a) SerialI.print(a, HEX)
-#define _I_PMP(a) SerialI.print(millis()); SerialI.print(": "); SerialI.print(a)
-#define _I_PML(a) SerialI.print(millis()); SerialI.print(": "); SerialI.println(a)
+#define _I_PMP(a) SerialI.print(millis()); SerialI.print(F(": ")); SerialI.print(a)
+#define _I_PML(a) SerialI.print(millis()); SerialI.print(F(": ")); SerialI.println(a)
 #else
 #define _I_PP(a)
 #define _I_PL(a)
@@ -81,8 +81,8 @@
 #define _E_PP(a) SerialE.print(a)
 #define _E_PL(a) SerialE.println(a)
 #define _E_PH(a) SerialE.print(a, HEX)
-#define _E_PMP(a) SerialE.print(millis()); SerialE.print(": "); SerialE.print(a)
-#define _E_PML(a) SerialE.print(millis()); SerialE.print(": "); SerialE.println(a)
+#define _E_PMP(a) SerialE.print(millis()); SerialE.print(F(": ")); SerialE.print(a)
+#define _E_PML(a) SerialE.print(millis()); SerialE.print(F(": ")); SerialE.println(a)
 #else
 #define _E_PP(a)
 #define _E_PL(a)
@@ -94,7 +94,7 @@
 // ==== Test options ==================
 #define _TEST_
 #define _MQTT_TEST_
-//#define _WIFI_TEST_
+#define _WIFI_TEST_
 
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
@@ -134,12 +134,12 @@ Scheduler ts;
 void onWiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	_S_PMP("Connected to: ");  _S_PL(PRIMARY_SSID);
+	_S_PMP(F("Connected to: "));  _S_PL(PRIMARY_SSID);
 }
 
 void onWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
-	_S_PMP("IP address: "); _S_PL(WiFi.localIP());
+	_S_PMP(F("IP address: ")); _S_PL(WiFi.localIP());
 	onConnectMQTT();
 }
 
@@ -176,15 +176,15 @@ void onConnectMQTT()
 {
 	if (!mqttClient.connected())
 	{
-		_S_PL();  _S_PMP("Connecting ");  _S_PP(mqttClientId.c_str()); _S_PP(" to MQTT["); _S_PP(MQTT_SERVER); _S_PP("] ");
+		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
 		if (mqttClient.connect(mqttClientId.c_str()))
 		{
-			_S_PL("MQTT CONNECTED!");
+			_S_PL(F("MQTT CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
 		{
-			_S_PP("FAILED!!! rc="); _S_PL(mqttClient.state());
+			_S_PP(F("FAILED!!! rc=")); _S_PL(mqttClient.state());
 		}
 	}
 }
@@ -204,7 +204,7 @@ Task taskHandleOTA(TASK_IMMEDIATE, TASK_FOREVER, &onHandleOTA, &ts);
 
 void onShowWiFiStatus()
 {
-	_I_PMP("RSSI [");  _I_PP(WiFi.SSID()); _I_PP("] = "); _I_PL(WiFi.RSSI());
+	_I_PMP(F("RSSI ["));  _I_PP(WiFi.SSID()); _I_PP(F("] = ")); _I_PL(WiFi.RSSI());
 }
 Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
 
@@ -215,7 +215,7 @@ void onSendWiFiStatus()
 		snprintf(msg, MSG_BUFFER_SIZE, "%d", WiFi.RSSI());
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/linkquality", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
 Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
@@ -231,7 +231,7 @@ uint16_t test_value = 0;
 void onGetTestValue()
 {
 	test_value++;
-	_I_PMP("Test counter: "); _I_PL(test_value);
+	_I_PMP(F("Test counter: ")); _I_PL(test_value);
 }
 Task taskGetTestValue(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestValue, &ts);
 
@@ -243,7 +243,7 @@ void onSendTest()
 		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/test_counter", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(" = ");  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
 Task taskSendTest(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onSendTest, &ts);
@@ -260,7 +260,7 @@ void setup()
 	randomSeed(analogRead(0));
 	pinMode(LED_BUILTIN, OUTPUT);
 
-	_S_PL(""); _S_PML("Programm started!");
+	_S_PL(""); _S_PML(F("Programm started!"));
 
 	WiFi.onEvent(onWiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
 	WiFi.onEvent(onWiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -285,11 +285,11 @@ void setup()
 		{
 			String type;
 			if (ArduinoOTA.getCommand() == U_FLASH)
-				type = "sketch";
+				type = F("sketch");
 			else // U_SPIFFS
-				type = "filesystem";
+				type = F("filesystem");
 			// NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-			Serial.println("Start updating " + type);
+			Serial.print(F("Start updating ")); Serial.println(type);
 		}
 	);
 
@@ -297,7 +297,7 @@ void setup()
 	(
 		[]()
 		{
-			Serial.println("\nEnd");
+			Serial.println(F("\nEnd"));
 		}
 	);
 
@@ -314,11 +314,11 @@ void setup()
 		[](ota_error_t error)
 		{
 			Serial.printf("Error[%u]: ", error);
-			if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-			else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-			else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-			else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-			else if (error == OTA_END_ERROR) Serial.println("End Failed");
+			if (error == OTA_AUTH_ERROR) Serial.println(F("Auth Failed"));
+			else if (error == OTA_BEGIN_ERROR) Serial.println(F("Begin Failed"));
+			else if (error == OTA_CONNECT_ERROR) Serial.println(F("Connect Failed"));
+			else if (error == OTA_RECEIVE_ERROR) Serial.println(F("Receive Failed"));
+			else if (error == OTA_END_ERROR) Serial.println(F("End Failed"));
 		}
 	);
 
@@ -345,7 +345,7 @@ void loop()
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length)
 {
-	_I_PMP("Message arrived ["); _I_PP(topic); _I_PP("] ");
+	_I_PMP(F("Message arrived [")); _I_PP(topic); _I_PP(F("] "));
 	for (int i = 0; i < length; i++)
 	{
 		_I_PP((char)payload[i]);
