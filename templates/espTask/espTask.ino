@@ -1,8 +1,13 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-// BEGIN TEMPLATE (Version 1.25)
+#define SOFTWARE_VERSION "01.012.20230828"
+
+
+// BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
+
+#define TEMPLATE_VERSION "T-1.25"
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
@@ -96,6 +101,10 @@
 #define _MQTT_TEST_
 #define _WIFI_TEST_
 
+#ifndef SOFTWARE_VERSION
+#define SOFTWARE_VERSION TEMPLATE_VERSION
+#endif // !SOFTWARE_VERSION
+
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
@@ -166,7 +175,7 @@ PubSubClient mqttClient(ethClient);
 
 String mqttClientId = MQTT_CLIENT_NAME;
 
-#define MSG_BUFFER_SIZE	10
+#define MSG_BUFFER_SIZE	20
 char msg[MSG_BUFFER_SIZE];
 
 #define TOPIC_BUFFER_SIZE	40
@@ -216,6 +225,16 @@ void onSendWiFiStatus()
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/linkquality", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
 		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", TEMPLATE_VERSION);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-templateVersion", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", SOFTWARE_VERSION);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-softwareBuildID", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
 Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
@@ -225,6 +244,7 @@ Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWi
 // END TEMPLATE
 
 #ifdef _TEST_
+
 #define DATA_SEND_INTERVAL	20
 uint16_t test_value = 0;
 
@@ -261,6 +281,8 @@ void setup()
 	pinMode(LED_BUILTIN, OUTPUT);
 
 	_S_PL(""); _S_PML(F("Programm started!"));
+	_S_PMP(F("Template version: ")); _S_PL(TEMPLATE_VERSION);
+	_S_PMP(F("Software version: ")); _S_PL(SOFTWARE_VERSION);
 
 	WiFi.onEvent(onWiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
 	WiFi.onEvent(onWiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
