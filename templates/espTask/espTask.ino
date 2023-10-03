@@ -229,12 +229,22 @@ void onSendWiFiStatus()
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", TEMPLATE_VERSION);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-templateVersion", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", SOFTWARE_VERSION);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-softwareBuildID", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.localIP().toString());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkAddress", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.macAddress().c_str());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-ieeeAddr", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
 Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
