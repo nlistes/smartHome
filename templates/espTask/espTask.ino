@@ -1,13 +1,16 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#define SOFTWARE_VERSION "01.012.20230828"
-
+#define SOFTWARE_VERSION "20231202"
+//#define HOSTNAME "ESP32-boilerControl"
+//#define DEVICE_TYPE "Boiler"
+//#define DEVICE_NAME "Pagrabs"
+//#define MQTT_IN_TOPIC "Boiler/#"
 
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
 
-#define TEMPLATE_VERSION "T-1.25"
+#define TEMPLATE_VERSION "T-1.026"
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
@@ -30,7 +33,7 @@
 #define _DEBUG_
 #define _DEBUG_SYSTEM_
 #define _DEBUG_INTERNAL_
-#define _DEBUG_EXTERNAL_
+//#define _DEBUG_EXTERNAL_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -161,9 +164,13 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 #ifdef _MQTT_TEST_
 	#define MQTT_SERVER "10.20.30.70"
 	#define MQTT_CLIENT_NAME "espTest-"
+	#define MQTT_USER ""
+	#define MQTT_PASS ""
 #else
 	#define MQTT_SERVER "10.20.30.80"
 	#define MQTT_CLIENT_NAME "espTask-"
+	#define MQTT_USER "mqtt"
+	#define MQTT_PASS "mqtt"
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
@@ -186,7 +193,7 @@ void onConnectMQTT()
 	if (!mqttClient.connected())
 	{
 		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
-		if (mqttClient.connect(mqttClientId.c_str()))
+		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER, MQTT_PASS))
 		{
 			_S_PL(F("MQTT CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
@@ -229,22 +236,22 @@ void onSendWiFiStatus()
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", TEMPLATE_VERSION);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-templateVersion", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", SOFTWARE_VERSION);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-softwareBuildID", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.localIP().toString());
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkAddress", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.macAddress().c_str());
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-ieeeAddr", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
-		//_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
 Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
