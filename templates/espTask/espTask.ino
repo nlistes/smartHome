@@ -163,12 +163,10 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 #ifdef _MQTT_TEST_
 	#define MQTT_SERVER "10.20.30.70"
-	#define MQTT_CLIENT_NAME "espTest-"
 	#define MQTT_USER ""
 	#define MQTT_PASS ""
 #else
 	#define MQTT_SERVER "10.20.30.80"
-	#define MQTT_CLIENT_NAME "espTask-"
 	#define MQTT_USER "mqtt"
 	#define MQTT_PASS "mqtt"
 #endif // _MQTT_TEST_
@@ -180,7 +178,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 PubSubClient mqttClient(ethClient);
 
-String mqttClientId = MQTT_CLIENT_NAME;
+String mqttClientId = DEVICE_NAME;
 
 #define MSG_BUFFER_SIZE	20
 char msg[MSG_BUFFER_SIZE];
@@ -224,7 +222,7 @@ void onShowWiFiStatus()
 }
 Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
 
-void onSendWiFiStatus()
+void onSendDeviceStatus()
 {
 	if (mqttClient.connected())
 	{
@@ -254,7 +252,7 @@ void onSendWiFiStatus()
 		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
-Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
+Task taskSendDeviceStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendDeviceStatus, &ts);
 
 
 // !!! Do not make changes! Update from espTask.ino
@@ -312,7 +310,7 @@ void setup()
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);
 
-	mqttClientId = mqttClientId + String(random(0xffff), HEX);;
+	mqttClientId = mqttClientId + "-" + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
 	mqttClient.setCallback(mqtt_callback);
 
@@ -367,7 +365,7 @@ void setup()
 	taskHandleOTA.enable();
 	taskRunMQTT.enable();
 	taskShowWiFiStatus.enableDelayed();
-	taskSendWiFiStatus.enableDelayed();
+	taskSendDeviceStatus.enableDelayed();
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE
 
