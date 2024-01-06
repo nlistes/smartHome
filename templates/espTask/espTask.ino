@@ -1,7 +1,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#define SOFTWARE_VERSION "20231202"
+#define SOFTWARE_VERSION "20240106"
 //#define HOSTNAME "ESP32-boilerControl"
 //#define DEVICE_TYPE "Boiler"
 //#define DEVICE_NAME "Pagrabs"
@@ -10,7 +10,7 @@
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
 
-#define TEMPLATE_VERSION "T-1.026"
+#define TEMPLATE_VERSION "T-1.027"
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
@@ -190,10 +190,10 @@ void onConnectMQTT()
 {
 	if (!mqttClient.connected())
 	{
-		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
+		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] - ");
 		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER, MQTT_PASS))
 		{
-			_S_PL(F("MQTT CONNECTED!"));
+			_S_PL(F("CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
@@ -238,6 +238,11 @@ void onSendDeviceStatus()
 
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", SOFTWARE_VERSION);
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-softwareBuildID", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.SSID());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkSSID", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
 		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
@@ -313,6 +318,7 @@ void setup()
 	mqttClientId = mqttClientId + "-" + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
 	mqttClient.setCallback(mqtt_callback);
+	_S_PMP(F("MQTT server: ")); _S_PL(MQTT_SERVER);
 
 	ArduinoOTA.setHostname(HOSTNAME);
 
