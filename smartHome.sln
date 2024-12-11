@@ -57,6 +57,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boilerControl", "src\boiler
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "uniTask", "templates\uniTask\uniTask.vcxproj", "{71BB1584-6100-4777-AF8D-ED8ECDB3A9E0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pumpingOut", "pumpingOut\pumpingOut.vcxproj", "{F8823027-C03D-4876-800F-979CFE3CA2B2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "suctionPump", "suctionPump\suctionPump.vcxproj", "{1C00E134-ADFA-42C3-AFBA-1D69978752D0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -139,6 +143,14 @@ Global
 		{71BB1584-6100-4777-AF8D-ED8ECDB3A9E0}.Debug|x86.Build.0 = Debug|Win32
 		{71BB1584-6100-4777-AF8D-ED8ECDB3A9E0}.Release|x86.ActiveCfg = Release|Win32
 		{71BB1584-6100-4777-AF8D-ED8ECDB3A9E0}.Release|x86.Build.0 = Release|Win32
+		{F8823027-C03D-4876-800F-979CFE3CA2B2}.Debug|x86.ActiveCfg = Debug|Win32
+		{F8823027-C03D-4876-800F-979CFE3CA2B2}.Debug|x86.Build.0 = Debug|Win32
+		{F8823027-C03D-4876-800F-979CFE3CA2B2}.Release|x86.ActiveCfg = Release|Win32
+		{F8823027-C03D-4876-800F-979CFE3CA2B2}.Release|x86.Build.0 = Release|Win32
+		{1C00E134-ADFA-42C3-AFBA-1D69978752D0}.Debug|x86.ActiveCfg = Debug|Win32
+		{1C00E134-ADFA-42C3-AFBA-1D69978752D0}.Debug|x86.Build.0 = Debug|Win32
+		{1C00E134-ADFA-42C3-AFBA-1D69978752D0}.Release|x86.ActiveCfg = Release|Win32
+		{1C00E134-ADFA-42C3-AFBA-1D69978752D0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
