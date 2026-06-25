@@ -1,6 +1,12 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// ==== Test options ==================
+#define _TEST_
+#define _MQTT_TEST_
+#define _WIFI_TEST_
+
+// ==== Host parameters ===============
 #define SOFTWARE_VERSION "20240106"
 //#define HOSTNAME "ESP32-boilerControl"
 //#define DEVICE_TYPE "Boiler"
@@ -9,7 +15,7 @@
 
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
-// 1.26 - Username and Password added for MQTT. Test option moved outside template. Add Host parameters block.
+// 1.27 - Username and Password added for MQTT. Test option moved outside template. Add Host parameters block.
 
 #define TEMPLATE_VERSION "T-1.027"
 
@@ -34,7 +40,7 @@
 #define _DEBUG_
 #define _DEBUG_SYSTEM_
 #define _DEBUG_INTERNAL_
-//#define _DEBUG_EXTERNAL_
+#define _DEBUG_EXTERNAL_
 
 //===== Debugging macros ========================
 #ifdef _DEBUG_
@@ -161,9 +167,13 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 #ifdef _MQTT_TEST_
 	#define MQTT_SERVER "10.20.30.70"
 	#define MQTT_CLIENT_NAME "espTest-"
+	#define MQTT_USER_NAME "mqtt"
+	#define MQTT_PASSWORD "mqtt"
 #else
 	#define MQTT_SERVER "10.20.30.80"
 	#define MQTT_CLIENT_NAME "espTask-"
+	#define MQTT_USER_NAME "mqtt"
+	#define MQTT_PASSWORD "mqtt"
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
@@ -186,9 +196,9 @@ void onConnectMQTT()
 	if (!mqttClient.connected())
 	{
 		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
-		if (mqttClient.connect(mqttClientId.c_str()))
+		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER_NAME, MQTT_PASSWORD))
 		{
-			_S_PL(F("CONNECTED!"));
+			_S_PL(F("MQTT CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
