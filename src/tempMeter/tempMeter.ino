@@ -1,11 +1,20 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// ==== Test options ==================
+//#define _TEST_
+#define _MQTT_TEST_
+#define _WIFI_TEST_
+
+// ==== Host parameters ===============
 #define HOSTNAME "ESP32-tempMeter"
+#define DEVICE_TYPE "tempmeter"
+#define DEVICE_NAME "boiler"
 
-
-// BEGIN TEMPLATE
+// BEGIN TEMPLATE - DEFINITIONS
+// (Version 1.26)
 // !!! Do not make changes! Update from espTask.ino
+// 1.26 - Username and Password added for MQTT. Test option moved outside template.
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
@@ -36,8 +45,8 @@
 #define _PP(a) SerialD.print(a)
 #define _PL(a) SerialD.println(a)
 #define _PH(a) SerialD.print(a, HEX)
-#define _PMP(a) SerialD.print(millis()); SerialD.print(": "); SerialD.print(a)
-#define _PML(a) SerialD.print(millis()); SerialD.print(": "); SerialD.println(a)
+#define _PMP(a) SerialD.print(millis()); SerialD.print(F(": ")); SerialD.print(a)
+#define _PML(a) SerialD.print(millis()); SerialD.print(F(": ")); SerialD.println(a)
 #else
 #define _PP(a)
 #define _PL(a)
@@ -52,8 +61,8 @@
 #define _S_PP(a) SerialS.print(a)
 #define _S_PL(a) SerialS.println(a)
 #define _S_PH(a) SerialS.print(a, HEX)
-#define _S_PMP(a) SerialS.print(millis()); SerialS.print(": "); SerialS.print(a)
-#define _S_PML(a) SerialS.print(millis()); SerialS.print(": "); SerialS.println(a)
+#define _S_PMP(a) SerialS.print(millis()); SerialS.print(F(": ")); SerialS.print(a)
+#define _S_PML(a) SerialS.print(millis()); SerialS.print(F(": ")); SerialS.println(a)
 #else
 #define _S_PP(a)
 #define _S_PL(a)
@@ -68,8 +77,8 @@
 #define _I_PP(a) SerialI.print(a)
 #define _I_PL(a) SerialI.println(a)
 #define _I_PH(a) SerialI.print(a, HEX)
-#define _I_PMP(a) SerialI.print(millis()); SerialI.print(": "); SerialI.print(a)
-#define _I_PML(a) SerialI.print(millis()); SerialI.print(": "); SerialI.println(a)
+#define _I_PMP(a) SerialI.print(millis()); SerialI.print(F(": ")); SerialI.print(a)
+#define _I_PML(a) SerialI.print(millis()); SerialI.print(F(": ")); SerialI.println(a)
 #else
 #define _I_PP(a)
 #define _I_PL(a)
@@ -84,8 +93,8 @@
 #define _E_PP(a) SerialE.print(a)
 #define _E_PL(a) SerialE.println(a)
 #define _E_PH(a) SerialE.print(a, HEX)
-#define _E_PMP(a) SerialE.print(millis()); SerialE.print(": "); SerialE.print(a)
-#define _E_PML(a) SerialE.print(millis()); SerialE.print(": "); SerialE.println(a)
+#define _E_PMP(a) SerialE.print(millis()); SerialE.print(F(": ")); SerialE.print(a)
+#define _E_PML(a) SerialE.print(millis()); SerialE.print(F(": ")); SerialE.println(a)
 #else
 #define _E_PP(a)
 #define _E_PL(a)
@@ -94,14 +103,17 @@
 #define _E_PML(a)
 #endif
 
-// ==== Test options ==================
-//#define _TEST_
-#define _MQTT_TEST_
-//#define _WIFI_TEST_
-
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
+
+#ifndef DEVICE_TYPE
+#define DEVICE_TYPE "Unknown"
+#endif // !DEVICE_TYPE
+
+#ifndef DEVICE_NAME
+#define DEVICE_NAME "Unknown"
+#endif // !DEVICE_TYPE
 
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -129,12 +141,12 @@ Scheduler ts;
 void onWiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 {
 	digitalWrite(LED_BUILTIN, HIGH);
-	_S_PMP("Connected to: ");  _S_PL(PRIMARY_SSID);
+	_S_PMP(F("Connected to: "));  _S_PL(PRIMARY_SSID);
 }
 
 void onWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
-	_S_PMP("IP address: "); _S_PL(WiFi.localIP());
+	_S_PMP(F("IP address: ")); _S_PL(WiFi.localIP());
 	onConnectMQTT();
 }
 
@@ -145,11 +157,15 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-#define MQTT_SERVER "10.20.30.71"
+#define MQTT_SERVER "10.20.30.70"
 #define MQTT_CLIENT_NAME "espTest-"
+#define MQTT_USER_NAME "mqtt"
+#define MQTT_PASSWORD "mqtt"
 #else
-#define MQTT_SERVER "10.20.30.81"
+#define MQTT_SERVER "10.20.30.80"
 #define MQTT_CLIENT_NAME "espTask-"
+#define MQTT_USER_NAME "mqtt"
+#define MQTT_PASSWORD "mqtt"
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
@@ -171,15 +187,15 @@ void onConnectMQTT()
 {
 	if (!mqttClient.connected())
 	{
-		_S_PL();  _S_PMP("Connecting ");  _S_PP(mqttClientId.c_str()); _S_PP(" to MQTT["); _S_PP(MQTT_SERVER); _S_PP("] ");
-		if (mqttClient.connect(mqttClientId.c_str()))
+		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
+		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER_NAME, MQTT_PASSWORD))
 		{
-			_S_PL("MQTT CONNECTED!");
+			_S_PL(F("MQTT CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
 		{
-			_S_PP("FAILED!!! rc="); _S_PL(mqttClient.state());
+			_S_PP(F("FAILED!!! rc=")); _S_PL(mqttClient.state());
 		}
 	}
 }
@@ -197,8 +213,27 @@ void onHandleOTA()
 }
 Task taskHandleOTA(TASK_IMMEDIATE, TASK_FOREVER, &onHandleOTA, &ts);
 
+void onShowWiFiStatus()
+{
+	_I_PMP(F("RSSI ["));  _I_PP(WiFi.SSID()); _I_PP(F("] = ")); _I_PL(WiFi.RSSI());
+}
+Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
+
+void onSendWiFiStatus()
+{
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "%d", WiFi.RSSI());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/linkquality", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+	}
+}
+Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
+
+
 // !!! Do not make changes! Update from espTask.ino
-// END TEMPLATE
+// END TEMPLATE - DEFINITIONS
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #define ONE_WIRE_BUS D5
@@ -266,8 +301,14 @@ Task taskShowTempereature(TASK_IMMEDIATE, TASK_ONCE, &onShowTemperature, &ts);
 void onGetTempereature()
 {
 	_I_PML("Getting temperatures... ");
+#ifndef _TEST_
 	topTemperature = sensors.getTempC(topThermometer);
 	caseTemperature = sensors.getTempC(caseThermometer);
+#else
+	topTemperature = 2;
+	caseTemperature = 1;
+#endif // !_TEST_
+
 	taskShowTempereature.restart();
 	_I_PML("DONE");
 }
@@ -293,14 +334,14 @@ Task taskOutputResult(TEMPERATURE_READ_PERIOD * TASK_SECOND, TASK_FOREVER, &onOu
 
 void setup()
 {
-	// BEGIN TEMPLATE
+	// BEGIN TEMPLATE - SETUP
 	// !!! Do not make changes! Update from espTask.ino
 	Serial.begin(COM_SPEED);
 	delay(100);
 	randomSeed(analogRead(0));
 	pinMode(LED_BUILTIN, OUTPUT);
 
-	_S_PL(""); _S_PML("Programm started!");
+	_S_PL(""); _S_PML(F("Programm started!"));
 
 	WiFi.onEvent(onWiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
 	WiFi.onEvent(onWiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -325,11 +366,11 @@ void setup()
 		{
 			String type;
 			if (ArduinoOTA.getCommand() == U_FLASH)
-				type = "sketch";
+				type = F("sketch");
 			else // U_SPIFFS
-				type = "filesystem";
+				type = F("filesystem");
 			// NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-			Serial.println("Start updating " + type);
+			Serial.print(F("Start updating ")); Serial.println(type);
 		}
 	);
 
@@ -337,7 +378,7 @@ void setup()
 	(
 		[]()
 		{
-			Serial.println("\nEnd");
+			Serial.println(F("\nEnd"));
 		}
 	);
 
@@ -354,21 +395,23 @@ void setup()
 		[](ota_error_t error)
 		{
 			Serial.printf("Error[%u]: ", error);
-			if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-			else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-			else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-			else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-			else if (error == OTA_END_ERROR) Serial.println("End Failed");
+			if (error == OTA_AUTH_ERROR) Serial.println(F("Auth Failed"));
+			else if (error == OTA_BEGIN_ERROR) Serial.println(F("Begin Failed"));
+			else if (error == OTA_CONNECT_ERROR) Serial.println(F("Connect Failed"));
+			else if (error == OTA_RECEIVE_ERROR) Serial.println(F("Receive Failed"));
+			else if (error == OTA_END_ERROR) Serial.println(F("End Failed"));
 		}
 	);
 
 	ArduinoOTA.begin();
 
 	//tConnectMQTT.enable();
-	taskRunMQTT.enable();
 	taskHandleOTA.enable();
+	taskRunMQTT.enable();
+	taskShowWiFiStatus.enableDelayed();
+	taskSendWiFiStatus.enableDelayed();
 	// !!! Do not make changes! Update from espTask.ino
-	// END TEMPLATE
+	// END TEMPLATE - SETUP
 
 	sensors.setResolution(topThermometer, TEMPERATURE_PRECISION);
 	sensors.setResolution(caseThermometer, TEMPERATURE_PRECISION);
