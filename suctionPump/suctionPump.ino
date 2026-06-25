@@ -1,27 +1,23 @@
-#include <OneWire.h>
-#include <DallasTemperature.h>
-
-#define SOFTWARE_VERSION "20240106"
-//#define HOSTNAME "ESP32-boilerControl"
-//#define DEVICE_TYPE "Boiler"
-//#define DEVICE_NAME "Pagrabs"
-//#define MQTT_IN_TOPIC "Boiler/#"
+#define SOFTWARE_VERSION "20240103"
+#define HOSTNAME "ESP32-suctionPump"
+#define DEVICE_TYPE "suctionPump"
+#define DEVICE_NAME "Pagrabs"
+#define MQTT_IN_TOPIC "suctionPump/command/#"
 
 // BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
-// 1.26 - Username and Password added for MQTT. Test option moved outside template. Add Host parameters block.
 
-#define TEMPLATE_VERSION "T-1.027"
+#define TEMPLATE_VERSION "T-1.026"
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
-	#include <WiFi.h>
-	#include <ESPmDNS.h>
-	#include <WiFiUdp.h>
-	#include <ArduinoOTA.h>
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #endif
 
 #include <TaskScheduler.h>
@@ -105,6 +101,10 @@
 #define _MQTT_TEST_
 #define _WIFI_TEST_
 
+#ifndef SOFTWARE_VERSION
+#define SOFTWARE_VERSION TEMPLATE_VERSION
+#endif // !SOFTWARE_VERSION
+
 #ifndef HOSTNAME
 #define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
@@ -119,21 +119,21 @@
 
 
 #if defined(ARDUINO_ARCH_ESP8266)
-	#define COM_SPEED 74880
-	WiFiClient ethClient;
+#define COM_SPEED 74880
+WiFiClient ethClient;
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
-	#define COM_SPEED 115200
-	WiFiClient ethClient;
+#define COM_SPEED 115200
+WiFiClient ethClient;
 #endif
 
 #ifdef _WIFI_TEST_
-	#define PRIMARY_SSID "OSIS"
-	#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #else
-	#define PRIMARY_SSID "PAGRABS"
-	#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define PRIMARY_SSID "PAGRABS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
 #define CONNECTION_TIMEOUT 10
@@ -159,11 +159,15 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 }
 
 #ifdef _MQTT_TEST_
-	#define MQTT_SERVER "10.20.30.70"
-	#define MQTT_CLIENT_NAME "espTest-"
+#define MQTT_SERVER "10.20.30.70"
+#define MQTT_CLIENT_NAME "suctionPump"
+#define MQTT_USER ""
+#define MQTT_PASS ""
 #else
-	#define MQTT_SERVER "10.20.30.80"
-	#define MQTT_CLIENT_NAME "espTask-"
+#define MQTT_SERVER "10.20.30.80"
+#define MQTT_CLIENT_NAME "suctionPump"
+#define MQTT_USER "mqtt"
+#define MQTT_PASS "mqtt"
 #endif // _MQTT_TEST_
 
 #ifndef MQTT_IN_TOPIC
@@ -173,7 +177,7 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 PubSubClient mqttClient(ethClient);
 
-String mqttClientId = DEVICE_NAME;
+String mqttClientId = MQTT_CLIENT_NAME;
 
 #define MSG_BUFFER_SIZE	20
 char msg[MSG_BUFFER_SIZE];
@@ -186,9 +190,9 @@ void onConnectMQTT()
 	if (!mqttClient.connected())
 	{
 		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
-		if (mqttClient.connect(mqttClientId.c_str()))
+		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER, MQTT_PASS))
 		{
-			_S_PL(F("CONNECTED!"));
+			_S_PL(F("MQTT CONNECTED!"));
 			mqttClient.subscribe(MQTT_IN_TOPIC);
 		}
 		else
@@ -197,7 +201,7 @@ void onConnectMQTT()
 		}
 	}
 }
-Task taskConnectMQTT(CONNECTION_TIMEOUT * TASK_SECOND, TASK_ONCE, &onConnectMQTT, &ts);
+Task taskConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &onConnectMQTT, &ts);
 
 void onRunMQTT()
 {
@@ -217,7 +221,7 @@ void onShowWiFiStatus()
 }
 Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
 
-void onSendDeviceStatus()
+void onSendWiFiStatus()
 {
 	if (mqttClient.connected())
 	{
@@ -236,11 +240,6 @@ void onSendDeviceStatus()
 		mqttClient.publish(topic, msg);
 		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 
-		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.SSID());
-		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkSSID", DEVICE_TYPE, DEVICE_NAME);
-		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
-
 		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.localIP().toString());
 		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkAddress", DEVICE_TYPE, DEVICE_NAME);
 		mqttClient.publish(topic, msg);
@@ -252,44 +251,31 @@ void onSendDeviceStatus()
 		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
 	}
 }
-Task taskSendDeviceStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendDeviceStatus, &ts);
+Task taskSendWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendWiFiStatus, &ts);
 
 
 // !!! Do not make changes! Update from espTask.ino
-// END TEMPLATE - DEFINITIONS
+// END TEMPLATE
 
-#ifdef _TEST_
+#define REPORT_PUMP_STATUS_INTERVAL 1
+#define WATER_LEVEL_PIN 36
+bool pumpingRequired = false;
+int waterLevel = 4095;
 
-#define DATA_SEND_INTERVAL	20
-uint16_t test_value = 0;
+void onGetWaterLevel();
+//Task taskGetWaterLevel(TASK_IMMEDIATE, TASK_FOREVER, &onGetWaterLevel, &ts);
+Task taskGetWaterLevel(REPORT_PUMP_STATUS_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetWaterLevel, &ts);
 
-void onGetTestValue()
-{
-	test_value++;
-	_I_PMP(F("Test counter: ")); _I_PL(test_value);
-}
-Task taskGetTestValue(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestValue, &ts);
-
-void onSendTest()
-{
-	onConnectMQTT();
-	if (mqttClient.connected())
-	{
-		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
-		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/test_counter", DEVICE_TYPE, DEVICE_NAME);
-		mqttClient.publish(topic, msg);
-		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
-	}
-}
-Task taskSendTest(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onSendTest, &ts);
-#endif // _TEST_
+void onShowPumpStatus();
+Task taskShowPumpStatus(REPORT_PUMP_STATUS_INTERVAL * TASK_SECOND, TASK_FOREVER, &onShowPumpStatus, &ts);
 
 
+#define PUMP_PIN 19
 
 void setup()
 {
-// BEGIN TEMPLATE - SETUP
-// !!! Do not make changes! Update from espTask.ino
+	// BEGIN TEMPLATE
+	// !!! Do not make changes! Update from espTask.ino
 	Serial.begin(COM_SPEED);
 	delay(100);
 	randomSeed(analogRead(0));
@@ -310,10 +296,9 @@ void setup()
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);
 
-	mqttClientId = mqttClientId + "-" + String(random(0xffff), HEX);;
+	mqttClientId = mqttClientId + String(random(0xffff), HEX);;
 	mqttClient.setServer(MQTT_SERVER, 1883);
 	mqttClient.setCallback(mqtt_callback);
-	_S_PMP(F("MQTT server: ")); _S_PL(MQTT_SERVER);
 
 	ArduinoOTA.setHostname(HOSTNAME);
 
@@ -366,14 +351,13 @@ void setup()
 	taskHandleOTA.enable();
 	taskRunMQTT.enable();
 	taskShowWiFiStatus.enableDelayed();
-	taskSendDeviceStatus.enableDelayed();
-// !!! Do not make changes! Update from espTask.ino
-// END TEMPLATE - SETUP
+	taskSendWiFiStatus.enableDelayed();
+	// !!! Do not make changes! Update from espTask.ino
+	// END TEMPLATE
 
-#ifdef _TEST_
-	taskGetTestValue.enableDelayed();
-	taskSendTest.enableDelayed();
-#endif // _TEST_
+	pinMode(PUMP_PIN, OUTPUT);
+	digitalWrite(PUMP_PIN, LOW);
+	taskGetWaterLevel.enableDelayed();
 }
 
 void loop()
@@ -389,4 +373,19 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
 		_I_PP((char)payload[i]);
 	}
 	_I_PL();
+}
+
+void onGetWaterLevel()
+{
+	waterLevel = analogRead(WATER_LEVEL_PIN);
+	_I_PMP(F("waterLevel = ")); _I_PL(waterLevel);
+
+	pumpingRequired = waterLevel < 4000;
+	_I_PMP(F("pumpingRequired = ")); _I_PL(pumpingRequired);
+
+	digitalWrite(PUMP_PIN, pumpingRequired);
+}
+
+void onShowPumpStatus()
+{
 }
