@@ -3,33 +3,35 @@
 
 // ==== Test options ==================
 #define _TEST_
-//#define _WIFI_TEST_
+#define _MQTT_TEST_
+#define _WIFI_TEST_
 
 // ==== Host parameters ===============
-#define SOFTWARE_VERSION "20260718-01"
+#define SOFTWARE_VERSION "20240106"
 //#define HOSTNAME "ESP32-boilerControl"
 //#define DEVICE_TYPE "Boiler"
 //#define DEVICE_NAME "Pagrabs"
+//#define MQTT_IN_TOPIC "Boiler/#"
 
-// BEGIN TEMPLATE - DEFINITIONS
+// BEGIN TEMPLATE
 // !!! Do not make changes! Update from espTask.ino
-// 1.000 - Clear WiFi connection
+// 1.27 - Username and Password added for MQTT. Test option moved outside template. Add Host parameters block.
 
-
-#define TEMPLATE_VERSION "W-1.000"
+#define TEMPLATE_VERSION "T-1.027"
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
-	#include <WiFi.h>
-	#include <ESPmDNS.h>
-	#include <WiFiUdp.h>
-	#include <ArduinoOTA.h>
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #endif
 
 #include <TaskScheduler.h>
+#include <PubSubClient.h>
 
 //#include <stdlib.h>
 //#include <stdio.h>
@@ -105,11 +107,12 @@
 #endif
 
 // ==== Test options ==================
-#define _APP_TEST_
+#define _TEST_
+#define _MQTT_TEST_
 #define _WIFI_TEST_
 
 #ifndef HOSTNAME
-#define HOSTNAME "ESP32-WIFI"
+#define HOSTNAME "ESP32-TASK"
 #endif // !HOSTNAME
 
 #ifndef DEVICE_TYPE
@@ -122,21 +125,21 @@
 
 
 #if defined(ARDUINO_ARCH_ESP8266)
-	#define COM_SPEED 74880
-	WiFiClient ethClient;
+#define COM_SPEED 74880
+WiFiClient ethClient;
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
-	#define COM_SPEED 115200
-	WiFiClient ethClient;
+#define COM_SPEED 115200
+WiFiClient ethClient;
 #endif
 
 #ifdef _WIFI_TEST_
-	#define PRIMARY_SSID "OSIS"
-	#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #else
-	#define PRIMARY_SSID "OSIS"
-	#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#define PRIMARY_SSID "PAGRABS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
 #define CONNECTION_TIMEOUT 10
@@ -152,6 +155,7 @@ void onWiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 void onWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
 	_S_PMP(F("IP address: ")); _S_PL(WiFi.localIP());
+	onConnectMQTT();
 }
 
 void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
@@ -159,6 +163,57 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 	digitalWrite(LED_BUILTIN, LOW);
 	//_S_PMP("Disconnected! Reason: "); _S_PL(info.wifi_sta_disconnected.reason);
 }
+
+#ifdef _MQTT_TEST_
+#define MQTT_SERVER "10.20.30.70"
+#define MQTT_CLIENT_NAME "espTest-"
+#define MQTT_USER_NAME "mqtt"
+#define MQTT_PASSWORD "mqtt"
+#else
+#define MQTT_SERVER "10.20.30.80"
+#define MQTT_CLIENT_NAME "espTask-"
+#define MQTT_USER_NAME "mqtt"
+#define MQTT_PASSWORD "mqtt"
+#endif // _MQTT_TEST_
+
+#ifndef MQTT_IN_TOPIC
+#define MQTT_IN_TOPIC "$SYS/broker/version"
+#endif // !MQTT_IN_TOPIC
+
+
+PubSubClient mqttClient(ethClient);
+
+String mqttClientId = DEVICE_NAME;
+
+#define MSG_BUFFER_SIZE	20
+char msg[MSG_BUFFER_SIZE];
+
+#define TOPIC_BUFFER_SIZE	40
+char topic[TOPIC_BUFFER_SIZE];
+
+void onConnectMQTT()
+{
+	if (!mqttClient.connected())
+	{
+		_S_PL();  _S_PMP(F("Connecting "));  _S_PP(mqttClientId.c_str()); _S_PP(F(" to MQTT[")); _S_PP(MQTT_SERVER); _S_PP("] ");
+		if (mqttClient.connect(mqttClientId.c_str(), MQTT_USER_NAME, MQTT_PASSWORD))
+		{
+			_S_PL(F("MQTT CONNECTED!"));
+			mqttClient.subscribe(MQTT_IN_TOPIC);
+		}
+		else
+		{
+			_S_PP(F("FAILED!!! rc=")); _S_PL(mqttClient.state());
+		}
+	}
+}
+Task taskConnectMQTT(CONNECTION_TIMEOUT* TASK_SECOND, TASK_ONCE, &onConnectMQTT, &ts);
+
+void onRunMQTT()
+{
+	mqttClient.loop();
+}
+Task taskRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &onRunMQTT, &ts);
 
 void onHandleOTA()
 {
@@ -172,12 +227,50 @@ void onShowWiFiStatus()
 }
 Task taskShowWiFiStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onShowWiFiStatus, &ts);
 
+void onSendDeviceStatus()
+{
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "%d", WiFi.RSSI());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/linkquality", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", TEMPLATE_VERSION);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-templateVersion", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", SOFTWARE_VERSION);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-softwareBuildID", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.SSID());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkSSID", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.localIP().toString());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-networkAddress", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+
+		snprintf(msg, MSG_BUFFER_SIZE, "%s", WiFi.macAddress().c_str());
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/device-ieeeAddr", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+	}
+}
+Task taskSendDeviceStatus(CONNECTION_TIMEOUT* TASK_SECOND, TASK_FOREVER, &onSendDeviceStatus, &ts);
+
+
 // !!! Do not make changes! Update from espTask.ino
 // END TEMPLATE - DEFINITIONS
 
-#ifdef _APP_TEST_
+#ifdef _TEST_
 
-#define DATA_GET_INTERVAL	20
+#define DATA_SEND_INTERVAL	20
 uint16_t test_value = 0;
 
 void onGetTestValue()
@@ -185,16 +278,28 @@ void onGetTestValue()
 	test_value++;
 	_I_PMP(F("Test counter: ")); _I_PL(test_value);
 }
-Task taskGetTestValue(DATA_GET_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestValue, &ts);
+Task taskGetTestValue(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestValue, &ts);
 
-#endif // _APP_TEST_
+void onSendTest()
+{
+	onConnectMQTT();
+	if (mqttClient.connected())
+	{
+		snprintf(msg, MSG_BUFFER_SIZE, "%d", test_value);
+		snprintf(topic, TOPIC_BUFFER_SIZE, "%s/%s/test_counter", DEVICE_TYPE, DEVICE_NAME);
+		mqttClient.publish(topic, msg);
+		_E_PMP(topic); _E_PP(F(" = "));  _E_PL(msg);
+	}
+}
+Task taskSendTest(DATA_SEND_INTERVAL* TASK_SECOND, TASK_FOREVER, &onSendTest, &ts);
+#endif // _TEST_
 
 
 
 void setup()
 {
-// BEGIN TEMPLATE - SETUP
-// !!! Do not make changes! Update from espTask.ino
+	// BEGIN TEMPLATE - SETUP
+	// !!! Do not make changes! Update from espTask.ino
 	Serial.begin(COM_SPEED);
 	delay(100);
 	randomSeed(analogRead(0));
@@ -214,6 +319,11 @@ void setup()
 	// https://randomnerdtutorials.com/solved-reconnect-esp8266-nodemcu-to-wifi/
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);
+
+	mqttClientId = mqttClientId + "-" + String(random(0xffff), HEX);;
+	mqttClient.setServer(MQTT_SERVER, 1883);
+	mqttClient.setCallback(mqtt_callback);
+	_S_PMP(F("MQTT server: ")); _S_PL(MQTT_SERVER);
 
 	ArduinoOTA.setHostname(HOSTNAME);
 
@@ -262,17 +372,31 @@ void setup()
 
 	ArduinoOTA.begin();
 
+	//tConnectMQTT.enable();
 	taskHandleOTA.enable();
+	taskRunMQTT.enable();
 	taskShowWiFiStatus.enableDelayed();
-// !!! Do not make changes! Update from espTask.ino
-// END TEMPLATE - SETUP
+	taskSendDeviceStatus.enableDelayed();
+	// !!! Do not make changes! Update from espTask.ino
+	// END TEMPLATE - SETUP
 
 #ifdef _TEST_
 	taskGetTestValue.enableDelayed();
+	taskSendTest.enableDelayed();
 #endif // _TEST_
 }
 
 void loop()
 {
 	ts.execute();
+}
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length)
+{
+	_I_PMP(F("Message arrived [")); _I_PP(topic); _I_PP(F("] "));
+	for (int i = 0; i < length; i++)
+	{
+		_I_PP((char)payload[i]);
+	}
+	_I_PL();
 }
