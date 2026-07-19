@@ -5,11 +5,25 @@
 #define _APP_TEST_
 //#define _WIFI_TEST_
 
+// ==== Debug options ==================
+#define _DEBUG_
+#define _DEBUG_SYSTEM_
+#define _DEBUG_INTERNAL_
+#define _DEBUG_EXTERNAL_
+
 // ==== Host parameters ===============
 #define SOFTWARE_VERSION "20260718-01"
 //#define HOSTNAME "ESP32-boilerControl"
 //#define DEVICE_TYPE "Boiler"
 //#define DEVICE_NAME "Pagrabs"
+
+#ifdef _WIFI_TEST_
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#else
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#endif // _WIFI_TEST_
 
 #include "src/espTask.inc"
 
