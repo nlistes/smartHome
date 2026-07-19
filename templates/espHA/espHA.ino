@@ -6,6 +6,11 @@
 //#define _WIFI_TEST_
 #define _MQTT_TEST_
 
+// ==== Debug options ==================
+#define _DEBUG_
+#define _DEBUG_SYSTEM_
+#define _DEBUG_INTERNAL_
+#define _DEBUG_EXTERNAL_
 
 // ==== Host parameters ===============
 #define SOFTWARE_VERSION "20260718-01"
@@ -13,8 +18,15 @@
 //#define DEVICE_TYPE "Boileris"
 //#define DEVICE_NAME "Pagrabs"
 
-#include "src/espTask.inc"
+#ifdef _WIFI_TEST_
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#else
+#define PRIMARY_SSID "OSIS"
+#define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
+#endif // _WIFI_TEST_
 
+#include "src/espTask.inc"
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.70"
@@ -69,7 +81,7 @@ void setup()
 	taskGetTestValue.enableDelayed();
 #endif // _APP_TEST_
 
-} // setup()
+}
 
 void loop()
 {

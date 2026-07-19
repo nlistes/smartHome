@@ -1,6 +1,6 @@
 // BEGIN TEMPLATE [HA] - DEFINITIONS
-// !!! Do not make changes! Update from espHA.ino
 // 1.000 - Basic HA integration
+
 #define TEMPLATE_VERSION "H-1.000"
 #include <ArduinoHA.h>
 
@@ -13,5 +13,4 @@ void onRunMQTT()
 }
 Task taskRunMQTT(TASK_IMMEDIATE, TASK_FOREVER, &onRunMQTT, &ts);
 
-// !!! Do not make changes! Update from espHA.ino
 // END TEMPLATE [HA] - DEFINITIONS
