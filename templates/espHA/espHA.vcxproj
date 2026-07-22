@@ -56,8 +56,6 @@
     </None>
     <None Include="src\espHA.inc" />
     <None Include="src\espHA_setup.inc" />
-    <None Include="src\espTask.inc" />
-    <None Include="src\espTask_setup.inc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="VisualMicro" />
@@ -82,7 +80,7 @@
       <CLanguageStandard>gnu11</CLanguageStandard>
       <CAdditionalWarning />
       <CppAdditionalWarning />
-      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\program files (x86)\microsoft visual studio\2019\community\common7\ide\extensions\b1by2vmf.i5x\Micro Platforms\default\vm-intelli-pre.h;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\Temp\VMBuilds\espHA\esp32_mhetesp32minikit\Debug\.vmintelli\651c86d77a95f16c5f1c7b9161232ecd\vm-intelli-gcc-defines.h;$(ProjectDir)..\..\..\..\program files (x86)\microsoft visual studio\2019\community\common7\ide\extensions\b1by2vmf.i5x\Micro Platforms\default\vm-intelli-post.h;$(ProjectDir)__vm\.espHA.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\program files (x86)\microsoft visual studio\2019\community\common7\ide\extensions\b1by2vmf.i5x\Micro Platforms\default\vm-intelli-pre.h;$(ProjectDir)..\..\..\..\Users\nauri\AppData\Local\Temp\VMBuilds\espHA\esp32_mhetesp32minikit\Debug\.vmintelli\640a3ef34c9037b3c6097098234b4c82\vm-intelli-gcc-defines.h;$(ProjectDir)..\..\..\..\program files (x86)\microsoft visual studio\2019\community\common7\ide\extensions\b1by2vmf.i5x\Micro Platforms\default\vm-intelli-post.h;$(ProjectDir)__vm\.espHA.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <UndefineAllPreprocessorDefinitions>true</UndefineAllPreprocessorDefinitions>
       <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
       <PreprocessorDefinitions>_VMICRO_INTELLISENSE;__2302_esp32__;__2302_ESP32__;_VMDEBUG=1;F_CPU=240000000L;ARDUINO=108010;ARDUINO_MH_ET_LIVE_ESP32MINIKIT;ARDUINO_ARCH_ESP32;ARDUINO_BOARD=MH_ET_LIVE_ESP32MINIKIT;ARDUINO_VARIANT=mhetesp32minikit;ARDUINO_PARTITION_default;ARDUINO_HOST_OS=windows;ARDUINO_FQBN={build.fqbn};ESP32;CORE_DEBUG_LEVEL=0;ARDUINO_USB_CDC_ON_BOOT=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>

@@ -13,7 +13,7 @@
 #define _DEBUG_EXTERNAL_
 
 // ==== Host parameters ===============
-#define SOFTWARE_VERSION "20260718-01"
+#define SOFTWARE_VERSION "20260722-01"
 //#define HOSTNAME "Boiler Control"
 //#define DEVICE_TYPE "Boileris"
 //#define DEVICE_NAME "Pagrabs"
@@ -26,7 +26,8 @@
 #define PRIMARY_PASS "IBMThinkPad0IBMThinkPad1"
 #endif // _WIFI_TEST_
 
-#include "src/espTask.inc"
+#include "../espTask/src/espTask.inc"
+//#include "../../templates/espTask/src/espTask.inc"
 
 #ifdef _MQTT_TEST_
 #define MQTT_SERVER "10.20.30.70"
@@ -41,6 +42,7 @@
 #endif // _MQTT_TEST_
 
 #include "src/espHA.inc"
+//#include "../../templates/espHA/src/espHA.inc"
 
 #ifdef _APP_TEST_
 
@@ -64,9 +66,11 @@ Task taskGetTestValue(DATA_GET_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestVa
 
 void setup()
 {
-#include "src/espTask_setup.inc"
+#include "../espTask/src/espTask_setup.inc"
+//#include "../../templates/espTask/src/espTask_setup.inc"
 
 #include "src/espHA_setup.inc"
+//#include "../../templates/espHA/src/espHA_setup.inc"
 
 #ifdef _APP_TEST_
 	// HA Sensors

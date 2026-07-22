@@ -12,7 +12,7 @@
 #define _DEBUG_EXTERNAL_
 
 // ==== Host parameters ===============
-#define SOFTWARE_VERSION "20260718-01"
+#define SOFTWARE_VERSION "20260722-01"
 //#define HOSTNAME "ESP32-boilerControl"
 //#define DEVICE_TYPE "Boiler"
 //#define DEVICE_NAME "Pagrabs"
@@ -26,6 +26,8 @@
 #endif // _WIFI_TEST_
 
 #include "src/espTask.inc"
+//#include "../../templates/espTask/src/espTask.inc"
+
 
 #ifdef _APP_TEST_
 
@@ -46,6 +48,7 @@ Task taskGetTestValue(DATA_GET_INTERVAL* TASK_SECOND, TASK_FOREVER, &onGetTestVa
 void setup()
 {
 #include "src/espTask_setup.inc"
+//#include "../../templates/espTask/src/espTask_setup.inc"
 
 #ifdef _APP_TEST_
 	taskGetTestValue.enableDelayed();
