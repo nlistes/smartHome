@@ -65,6 +65,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "espTask", "templates\espTas
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boilerTempMeter", "src\boilerTempMeter\boilerTempMeter.vcxproj", "{3B51ACED-4F78-44D5-A6EC-9C0B3CBED485}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boilerControl2", "src\boilerControl2\boilerControl2.vcxproj", "{E19F6644-10D0-44C0-B849-F0E9BE10035A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -283,6 +285,20 @@ Global
 		{3B51ACED-4F78-44D5-A6EC-9C0B3CBED485}.Release|ARM64.Build.0 = Release|ARM64
 		{3B51ACED-4F78-44D5-A6EC-9C0B3CBED485}.Release|ARM64.Deploy.0 = Release|ARM64
 		{3B51ACED-4F78-44D5-A6EC-9C0B3CBED485}.Release|x86.ActiveCfg = Release|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM.ActiveCfg = Debug|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM.Build.0 = Debug|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM.Deploy.0 = Debug|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM64.Build.0 = Debug|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Debug|x86.ActiveCfg = Debug|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM.ActiveCfg = Release|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM.Build.0 = Release|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM.Deploy.0 = Release|ARM
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM64.ActiveCfg = Release|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM64.Build.0 = Release|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|ARM64.Deploy.0 = Release|ARM64
+		{E19F6644-10D0-44C0-B849-F0E9BE10035A}.Release|x86.ActiveCfg = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
